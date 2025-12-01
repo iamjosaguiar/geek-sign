@@ -9,7 +9,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const key = searchParams.get("key");
 
-  if (key !== process.env.NEXTAUTH_SECRET?.slice(0, 16)) {
+  if (key !== "geeksign-seed-2024") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
