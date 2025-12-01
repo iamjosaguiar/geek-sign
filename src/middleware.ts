@@ -1,12 +1,8 @@
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/lib/auth";
 
-export async function middleware(req: NextRequest) {
-  // Use AUTH_SECRET as fallback for NextAuth v5 compatibility
-  const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
-  const token = await getToken({ req, secret });
-  const isLoggedIn = !!token;
+export default auth((req) => {
+  const isLoggedIn = !!req.auth;
   const { pathname } = req.nextUrl;
 
   // Public routes that don't require authentication
@@ -49,7 +45,7 @@ export async function middleware(req: NextRequest) {
   }
 
   return NextResponse.next();
-}
+});
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)"],
