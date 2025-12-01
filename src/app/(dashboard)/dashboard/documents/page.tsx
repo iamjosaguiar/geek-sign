@@ -1,0 +1,233 @@
+import { createClient } from "@/lib/supabase/server";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import Link from "next/link";
+import {
+  FileText,
+  Upload,
+  Search,
+  MoreHorizontal,
+  Eye,
+  Edit,
+  Trash2,
+  Download,
+  Send,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { formatDistanceToNow, formatDate } from "@/lib/utils";
+
+export default async function DocumentsPage() {
+  const supabase = createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { data: documents } = await supabase
+    .from("documents")
+    .select("*, recipients(id, email, status)")
+    .eq("user_id", user?.id)
+    .order("created_at", { ascending: false });
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "draft":
+        return <Badge variant="secondary">Draft</Badge>;
+      case "pending":
+        return <Badge variant="outline" className="border-amber-500 text-amber-600">Pending</Badge>;
+      case "completed":
+        return <Badge variant="default" className="bg-green-600">Completed</Badge>;
+      case "expired":
+        return <Badge variant="destructive">Expired</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  const getRecipientStatus = (recipients: { status: string }[] | null) => {
+    if (!recipients || recipients.length === 0) return "No recipients";
+    const signed = recipients.filter((r) => r.status === "signed").length;
+    return `${signed}/${recipients.length} signed`;
+  };
+
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">All Documents</h1>
+          <p className="text-muted-foreground">
+            Manage and track all your documents
+          </p>
+        </div>
+        <Button asChild>
+          <Link href="/dashboard/upload">
+            <Upload className="mr-2 h-4 w-4" />
+            Upload Document
+          </Link>
+        </Button>
+      </div>
+
+      {/* Search and Filters */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search documents..."
+                className="pl-9"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm">
+                All Status
+              </Button>
+              <Button variant="outline" size="sm">
+                Date Range
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Documents List */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Documents</CardTitle>
+          <CardDescription>
+            {documents?.length || 0} total documents
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {documents && documents.length > 0 ? (
+            <div className="space-y-2">
+              {/* Table Header */}
+              <div className="hidden md:grid md:grid-cols-12 gap-4 px-4 py-2 text-sm font-medium text-muted-foreground border-b">
+                <div className="col-span-4">Document</div>
+                <div className="col-span-2">Status</div>
+                <div className="col-span-2">Recipients</div>
+                <div className="col-span-2">Created</div>
+                <div className="col-span-2 text-right">Actions</div>
+              </div>
+
+              {/* Document Rows */}
+              {documents.map((doc) => (
+                <div
+                  key={doc.id}
+                  className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center rounded-lg border p-4 hover:bg-muted/50 transition-colors"
+                >
+                  {/* Document Info */}
+                  <div className="md:col-span-4 flex items-center gap-3">
+                    <div className="rounded-lg bg-muted p-2">
+                      <FileText className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{doc.title}</p>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {doc.file_name}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Status */}
+                  <div className="md:col-span-2">
+                    <span className="md:hidden text-sm text-muted-foreground mr-2">Status:</span>
+                    {getStatusBadge(doc.status)}
+                  </div>
+
+                  {/* Recipients */}
+                  <div className="md:col-span-2 text-sm text-muted-foreground">
+                    <span className="md:hidden text-muted-foreground mr-2">Recipients:</span>
+                    {getRecipientStatus(doc.recipients)}
+                  </div>
+
+                  {/* Created Date */}
+                  <div className="md:col-span-2 text-sm text-muted-foreground">
+                    <span className="md:hidden mr-2">Created:</span>
+                    <span title={formatDate(doc.created_at)}>
+                      {formatDistanceToNow(new Date(doc.created_at))} ago
+                    </span>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="md:col-span-2 flex items-center justify-end gap-2">
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link href={`/dashboard/documents/${doc.id}`}>
+                        <Eye className="h-4 w-4" />
+                        <span className="sr-only">View</span>
+                      </Link>
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">More options</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                          <Link href={`/dashboard/documents/${doc.id}`}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            View Details
+                          </Link>
+                        </DropdownMenuItem>
+                        {doc.status === "draft" && (
+                          <DropdownMenuItem asChild>
+                            <Link href={`/dashboard/documents/${doc.id}/edit`}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit Document
+                            </Link>
+                          </DropdownMenuItem>
+                        )}
+                        {doc.status === "draft" && (
+                          <DropdownMenuItem>
+                            <Send className="mr-2 h-4 w-4" />
+                            Send for Signing
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem>
+                          <Download className="mr-2 h-4 w-4" />
+                          Download
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-destructive">
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="rounded-full bg-muted p-4 mb-4">
+                <FileText className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="font-semibold">No documents yet</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Upload your first document to get started
+              </p>
+              <Button asChild>
+                <Link href="/dashboard/upload">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload Document
+                </Link>
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

@@ -1,0 +1,296 @@
+import { createClient } from "@/lib/supabase/server";
+import { notFound } from "next/navigation";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import Link from "next/link";
+import {
+  ArrowLeft,
+  Download,
+  Send,
+  Edit,
+  Trash2,
+  FileText,
+  User,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  Mail,
+} from "lucide-react";
+import { formatDate, formatDistanceToNow } from "@/lib/utils";
+
+interface DocumentPageProps {
+  params: { id: string };
+}
+
+export default async function DocumentPage({ params }: DocumentPageProps) {
+  const supabase = createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { data: document } = await supabase
+    .from("documents")
+    .select("*, recipients(*), document_fields(*)")
+    .eq("id", params.id)
+    .eq("user_id", user?.id)
+    .single();
+
+  if (!document) {
+    notFound();
+  }
+
+  const { data: auditLogs } = await supabase
+    .from("audit_logs")
+    .select("*")
+    .eq("document_id", params.id)
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "draft":
+        return <Badge variant="secondary" className="text-base px-3 py-1">Draft</Badge>;
+      case "pending":
+        return <Badge variant="outline" className="border-amber-500 text-amber-600 text-base px-3 py-1">Pending</Badge>;
+      case "completed":
+        return <Badge variant="default" className="bg-green-600 text-base px-3 py-1">Completed</Badge>;
+      case "expired":
+        return <Badge variant="destructive" className="text-base px-3 py-1">Expired</Badge>;
+      default:
+        return <Badge variant="secondary" className="text-base px-3 py-1">{status}</Badge>;
+    }
+  };
+
+  const getRecipientStatusIcon = (status: string) => {
+    switch (status) {
+      case "signed":
+        return <CheckCircle2 className="h-4 w-4 text-green-600" />;
+      case "declined":
+        return <XCircle className="h-4 w-4 text-destructive" />;
+      default:
+        return <Clock className="h-4 w-4 text-amber-600" />;
+    }
+  };
+
+  const formatFileSize = (bytes: number | null) => {
+    if (!bytes) return "Unknown";
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  };
+
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex flex-col gap-4">
+        <Button variant="ghost" size="sm" className="w-fit" asChild>
+          <Link href="/dashboard/documents">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Documents
+          </Link>
+        </Button>
+
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="rounded-lg bg-muted p-3">
+              <FileText className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">{document.title}</h1>
+              <p className="text-muted-foreground">{document.file_name}</p>
+              <div className="mt-2">
+                {getStatusBadge(document.status)}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {document.status === "draft" && (
+              <>
+                <Button variant="outline" asChild>
+                  <Link href={`/dashboard/documents/${document.id}/edit`}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit
+                  </Link>
+                </Button>
+                <Button>
+                  <Send className="mr-2 h-4 w-4" />
+                  Send for Signing
+                </Button>
+              </>
+            )}
+            <Button variant="outline">
+              <Download className="mr-2 h-4 w-4" />
+              Download
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-8 lg:grid-cols-3">
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Document Preview */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Document Preview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="aspect-[8.5/11] rounded-lg border bg-muted flex items-center justify-center">
+                <div className="text-center text-muted-foreground">
+                  <FileText className="h-16 w-16 mx-auto mb-4" />
+                  <p>PDF Preview</p>
+                  <p className="text-sm">Preview will be displayed here</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Activity Log */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Activity Log</CardTitle>
+              <CardDescription>Recent activity for this document</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {auditLogs && auditLogs.length > 0 ? (
+                <div className="space-y-4">
+                  {auditLogs.map((log) => (
+                    <div key={log.id} className="flex gap-4">
+                      <div className="relative flex flex-col items-center">
+                        <div className="rounded-full bg-muted p-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div className="flex-1 w-px bg-border" />
+                      </div>
+                      <div className="flex-1 pb-4">
+                        <p className="font-medium capitalize">
+                          {log.action.replace("_", " ")}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {formatDistanceToNow(new Date(log.created_at))} ago
+                        </p>
+                        {log.ip_address && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            IP: {log.ip_address}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No activity recorded yet
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* Document Details */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Created</p>
+                <p className="font-medium">{formatDate(document.created_at)}</p>
+              </div>
+              <Separator />
+              <div>
+                <p className="text-sm text-muted-foreground">File Size</p>
+                <p className="font-medium">{formatFileSize(document.file_size)}</p>
+              </div>
+              {document.expires_at && (
+                <>
+                  <Separator />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Expires</p>
+                    <p className="font-medium">{formatDate(document.expires_at)}</p>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Recipients */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Recipients</CardTitle>
+              {document.status === "draft" && (
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={`/dashboard/documents/${document.id}/edit`}>
+                    Edit
+                  </Link>
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent>
+              {document.recipients && document.recipients.length > 0 ? (
+                <div className="space-y-3">
+                  {document.recipients.map((recipient: { id: string; email: string; name: string | null; status: string }) => (
+                    <div
+                      key={recipient.id}
+                      className="flex items-center justify-between rounded-lg border p-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="rounded-full bg-muted p-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">
+                            {recipient.name || recipient.email}
+                          </p>
+                          {recipient.name && (
+                            <p className="text-xs text-muted-foreground">
+                              {recipient.email}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      {getRecipientStatusIcon(recipient.status)}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <Mail className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">No recipients added</p>
+                  {document.status === "draft" && (
+                    <Button variant="link" size="sm" asChild className="mt-2">
+                      <Link href={`/dashboard/documents/${document.id}/edit`}>
+                        Add recipients
+                      </Link>
+                    </Button>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Danger Zone */}
+          <Card className="border-destructive/50">
+            <CardHeader>
+              <CardTitle className="text-destructive">Danger Zone</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button variant="destructive" className="w-full">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Document
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
