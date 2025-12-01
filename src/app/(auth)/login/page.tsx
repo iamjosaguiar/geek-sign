@@ -40,9 +40,12 @@ function LoginForm() {
       });
 
       if (result?.error) {
+        console.error("Login error:", result.error);
         toast({
           title: "Error",
-          description: "Invalid email or password",
+          description: result.error === "CredentialsSignin"
+            ? "Invalid email or password"
+            : `Login failed: ${result.error}`,
           variant: "destructive",
         });
         return;
