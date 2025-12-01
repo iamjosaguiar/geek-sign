@@ -1,4 +1,6 @@
-import { createClient } from "@/lib/supabase/server";
+import { auth } from "@/lib/auth";
+import { db, templates } from "@/lib/db";
+import { eq, desc } from "drizzle-orm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -21,17 +23,17 @@ import {
 import { formatDistanceToNow } from "@/lib/utils";
 
 export default async function TemplatesPage() {
-  const supabase = createClient();
+  const session = await auth();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  if (!session?.user?.id) {
+    return null;
+  }
 
-  const { data: templates } = await supabase
-    .from("templates")
-    .select("*")
-    .eq("user_id", user?.id)
-    .order("created_at", { ascending: false });
+  const userTemplates = await db
+    .select()
+    .from(templates)
+    .where(eq(templates.userId, session.user.id))
+    .orderBy(desc(templates.createdAt));
 
   return (
     <div className="space-y-8">
@@ -52,9 +54,9 @@ export default async function TemplatesPage() {
       </div>
 
       {/* Templates Grid */}
-      {templates && templates.length > 0 ? (
+      {userTemplates && userTemplates.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {templates.map((template) => (
+          {userTemplates.map((template) => (
             <Card key={template.id} className="group">
               <CardHeader className="flex flex-row items-start justify-between">
                 <div className="flex items-center gap-3">
@@ -64,7 +66,7 @@ export default async function TemplatesPage() {
                   <div>
                     <CardTitle className="text-base">{template.name}</CardTitle>
                     <CardDescription className="text-xs">
-                      {formatDistanceToNow(new Date(template.created_at))} ago
+                      {formatDistanceToNow(new Date(template.createdAt))} ago
                     </CardDescription>
                   </div>
                 </div>

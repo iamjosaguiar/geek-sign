@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,8 +38,8 @@ interface SignPageProps {
 interface Field {
   id: string;
   type: string;
-  x_position: number;
-  y_position: number;
+  xPosition: number;
+  yPosition: number;
   width: number;
   height: number;
   page: number;
@@ -51,7 +50,7 @@ interface Field {
 interface DocumentData {
   id: string;
   title: string;
-  file_url: string;
+  fileUrl: string | null;
   status: string;
 }
 
@@ -73,53 +72,33 @@ export default function SignPage({ params }: SignPageProps) {
   const [isSigning, setIsSigning] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const { toast } = useToast();
-  const supabase = createClient();
 
   useEffect(() => {
     const fetchSigningData = async () => {
       try {
-        // Fetch recipient by token
-        const { data: recipientData, error: recipientError } = await supabase
-          .from("recipients")
-          .select("*, documents(*)")
-          .eq("signing_token", params.token)
-          .single();
+        const response = await fetch(`/api/sign/${params.token}`);
 
-        if (recipientError || !recipientData) {
+        if (!response.ok) {
           setError("Invalid or expired signing link. Please contact the sender for a new link.");
           setIsLoading(false);
           return;
         }
 
-        if (recipientData.status === "signed") {
+        const data = await response.json();
+
+        if (data.recipient.status === "signed") {
           setIsComplete(true);
-          setDocument(recipientData.documents);
-          setRecipient(recipientData);
+          setDocument(data.document);
+          setRecipient(data.recipient);
           setIsLoading(false);
           return;
         }
 
-        // Fetch fields for this recipient
-        const { data: fieldsData } = await supabase
-          .from("document_fields")
-          .select("*")
-          .eq("document_id", recipientData.document_id)
-          .eq("recipient_id", recipientData.id);
-
-        setDocument(recipientData.documents);
-        setRecipient(recipientData);
-        setFields(fieldsData || []);
+        setDocument(data.document);
+        setRecipient(data.recipient);
+        setFields(data.fields || []);
         setIsLoading(false);
-
-        // Log document opened
-        await supabase.from("audit_logs").insert({
-          document_id: recipientData.document_id,
-          recipient_id: recipientData.id,
-          action: "document_opened",
-          ip_address: null, // Would need server-side to get real IP
-        });
       } catch (err) {
         setError("An error occurred while loading the document.");
         setIsLoading(false);
@@ -127,7 +106,7 @@ export default function SignPage({ params }: SignPageProps) {
     };
 
     fetchSigningData();
-  }, [params.token, supabase]);
+  }, [params.token]);
 
   const handleFieldClick = (index: number) => {
     setCurrentFieldIndex(index);
@@ -200,44 +179,13 @@ export default function SignPage({ params }: SignPageProps) {
     setIsSigning(true);
 
     try {
-      // Update field values
-      for (const field of fields) {
-        if (field.value) {
-          await supabase
-            .from("document_fields")
-            .update({ value: field.value })
-            .eq("id", field.id);
-        }
-      }
-
-      // Update recipient status
-      await supabase
-        .from("recipients")
-        .update({ status: "signed", signed_at: new Date().toISOString() })
-        .eq("id", recipient?.id);
-
-      // Log signing
-      await supabase.from("audit_logs").insert({
-        document_id: document?.id,
-        recipient_id: recipient?.id,
-        action: "document_signed",
-        details: { fields_completed: fields.length },
+      const response = await fetch(`/api/sign/${params.token}/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fields }),
       });
 
-      // Check if all recipients have signed
-      const { data: allRecipients } = await supabase
-        .from("recipients")
-        .select("status")
-        .eq("document_id", document?.id);
-
-      const allSigned = allRecipients?.every((r) => r.status === "signed");
-
-      if (allSigned) {
-        await supabase
-          .from("documents")
-          .update({ status: "completed" })
-          .eq("id", document?.id);
-      }
+      if (!response.ok) throw new Error("Failed to submit signature");
 
       setIsComplete(true);
       toast({
@@ -411,8 +359,8 @@ export default function SignPage({ params }: SignPageProps) {
                         : "border-primary bg-primary/10 hover:bg-primary/20"
                     )}
                     style={{
-                      left: field.x_position,
-                      top: field.y_position,
+                      left: field.xPosition,
+                      top: field.yPosition,
                       width: field.width,
                       height: field.height,
                     }}

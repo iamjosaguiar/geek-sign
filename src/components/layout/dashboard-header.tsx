@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -24,24 +24,32 @@ import {
   LogOut,
   User,
 } from "lucide-react";
-import type { User as SupabaseUser } from "@supabase/supabase-js";
-import type { Profile } from "@/types";
+
+interface UserProfile {
+  id: string;
+  name: string | null;
+  email: string;
+  image: string | null;
+  plan: string;
+}
 
 interface DashboardHeaderProps {
-  user: SupabaseUser;
-  profile: Profile | null;
+  user: {
+    id: string;
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+  };
+  profile: UserProfile | null;
 }
 
 export function DashboardHeader({ user, profile }: DashboardHeaderProps) {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
 
   const handleSignOut = async () => {
     setIsLoading(true);
-    await supabase.auth.signOut();
-    router.push("/login");
-    router.refresh();
+    await signOut({ callbackUrl: "/login" });
   };
 
   const getInitials = (name: string | null | undefined) => {
@@ -54,7 +62,7 @@ export function DashboardHeader({ user, profile }: DashboardHeaderProps) {
       .slice(0, 2);
   };
 
-  const displayName = profile?.full_name || user.email || "User";
+  const displayName = profile?.name || user.name || user.email || "User";
   const planName = profile?.plan || "free";
 
   return (
@@ -100,10 +108,10 @@ export function DashboardHeader({ user, profile }: DashboardHeaderProps) {
             <Button variant="ghost" className="relative h-9 w-9 rounded-full">
               <Avatar className="h-9 w-9">
                 <AvatarImage
-                  src={profile?.avatar_url || undefined}
+                  src={profile?.image || user.image || undefined}
                   alt={displayName}
                 />
-                <AvatarFallback>{getInitials(profile?.full_name)}</AvatarFallback>
+                <AvatarFallback>{getInitials(profile?.name || user.name)}</AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>

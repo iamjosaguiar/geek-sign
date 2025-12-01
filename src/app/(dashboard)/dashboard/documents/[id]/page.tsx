@@ -1,4 +1,6 @@
-import { createClient } from "@/lib/supabase/server";
+import { auth } from "@/lib/auth";
+import { db, documents, recipients, documentFields, auditLogs } from "@/lib/db";
+import { eq, and, desc } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,28 +27,37 @@ interface DocumentPageProps {
 }
 
 export default async function DocumentPage({ params }: DocumentPageProps) {
-  const supabase = createClient();
+  const session = await auth();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  if (!session?.user?.id) {
+    return null;
+  }
 
-  const { data: document } = await supabase
-    .from("documents")
-    .select("*, recipients(*), document_fields(*)")
-    .eq("id", params.id)
-    .eq("user_id", user?.id)
-    .single();
+  const [document] = await db
+    .select()
+    .from(documents)
+    .where(and(eq(documents.id, params.id), eq(documents.userId, session.user.id)))
+    .limit(1);
 
   if (!document) {
     notFound();
   }
 
-  const { data: auditLogs } = await supabase
-    .from("audit_logs")
-    .select("*")
-    .eq("document_id", params.id)
-    .order("created_at", { ascending: false })
+  const docRecipients = await db
+    .select()
+    .from(recipients)
+    .where(eq(recipients.documentId, params.id));
+
+  const docFields = await db
+    .select()
+    .from(documentFields)
+    .where(eq(documentFields.documentId, params.id));
+
+  const logs = await db
+    .select()
+    .from(auditLogs)
+    .where(eq(auditLogs.documentId, params.id))
+    .orderBy(desc(auditLogs.createdAt))
     .limit(10);
 
   const getStatusBadge = (status: string) => {
@@ -102,7 +113,7 @@ export default async function DocumentPage({ params }: DocumentPageProps) {
             </div>
             <div>
               <h1 className="text-2xl font-bold tracking-tight">{document.title}</h1>
-              <p className="text-muted-foreground">{document.file_name}</p>
+              <p className="text-muted-foreground">{document.fileName}</p>
               <div className="mt-2">
                 {getStatusBadge(document.status)}
               </div>
@@ -158,9 +169,9 @@ export default async function DocumentPage({ params }: DocumentPageProps) {
               <CardDescription>Recent activity for this document</CardDescription>
             </CardHeader>
             <CardContent>
-              {auditLogs && auditLogs.length > 0 ? (
+              {logs && logs.length > 0 ? (
                 <div className="space-y-4">
-                  {auditLogs.map((log) => (
+                  {logs.map((log) => (
                     <div key={log.id} className="flex gap-4">
                       <div className="relative flex flex-col items-center">
                         <div className="rounded-full bg-muted p-2">
@@ -173,11 +184,11 @@ export default async function DocumentPage({ params }: DocumentPageProps) {
                           {log.action.replace("_", " ")}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {formatDistanceToNow(new Date(log.created_at))} ago
+                          {formatDistanceToNow(new Date(log.createdAt))} ago
                         </p>
-                        {log.ip_address && (
+                        {log.ipAddress && (
                           <p className="text-xs text-muted-foreground mt-1">
-                            IP: {log.ip_address}
+                            IP: {log.ipAddress}
                           </p>
                         )}
                       </div>
@@ -203,19 +214,19 @@ export default async function DocumentPage({ params }: DocumentPageProps) {
             <CardContent className="space-y-4">
               <div>
                 <p className="text-sm text-muted-foreground">Created</p>
-                <p className="font-medium">{formatDate(document.created_at)}</p>
+                <p className="font-medium">{formatDate(document.createdAt)}</p>
               </div>
               <Separator />
               <div>
                 <p className="text-sm text-muted-foreground">File Size</p>
-                <p className="font-medium">{formatFileSize(document.file_size)}</p>
+                <p className="font-medium">{formatFileSize(document.fileSize)}</p>
               </div>
-              {document.expires_at && (
+              {document.expiresAt && (
                 <>
                   <Separator />
                   <div>
                     <p className="text-sm text-muted-foreground">Expires</p>
-                    <p className="font-medium">{formatDate(document.expires_at)}</p>
+                    <p className="font-medium">{formatDate(document.expiresAt)}</p>
                   </div>
                 </>
               )}
@@ -235,9 +246,9 @@ export default async function DocumentPage({ params }: DocumentPageProps) {
               )}
             </CardHeader>
             <CardContent>
-              {document.recipients && document.recipients.length > 0 ? (
+              {docRecipients && docRecipients.length > 0 ? (
                 <div className="space-y-3">
-                  {document.recipients.map((recipient: { id: string; email: string; name: string | null; status: string }) => (
+                  {docRecipients.map((recipient) => (
                     <div
                       key={recipient.id}
                       className="flex items-center justify-between rounded-lg border p-3"

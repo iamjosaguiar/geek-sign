@@ -1,96 +1,37 @@
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
+import { auth } from "@/lib/auth";
+import { NextResponse } from "next/server";
 
-export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  });
+export default auth((req) => {
+  const isLoggedIn = !!req.auth;
+  const { pathname } = req.nextUrl;
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value,
-            ...options,
-          });
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          });
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          });
-        },
-        remove(name: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value: "",
-            ...options,
-          });
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          });
-          response.cookies.set({
-            name,
-            value: "",
-            ...options,
-          });
-        },
-      },
-    }
-  );
+  // Public routes
+  const publicRoutes = ["/", "/pricing", "/login", "/signup", "/forgot-password"];
+  const isPublicRoute = publicRoutes.includes(pathname);
+  const isAuthRoute = pathname.startsWith("/login") || pathname.startsWith("/signup") || pathname.startsWith("/forgot-password");
+  const isApiRoute = pathname.startsWith("/api");
+  const isSigningRoute = pathname.startsWith("/sign/");
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  // Protected routes
-  const protectedPaths = ["/dashboard", "/upload", "/documents", "/templates", "/team", "/settings"];
-  const isProtectedPath = protectedPaths.some((path) =>
-    request.nextUrl.pathname.startsWith(path)
-  );
-
-  // Auth routes (should redirect to dashboard if logged in)
-  const authPaths = ["/login", "/signup", "/forgot-password"];
-  const isAuthPath = authPaths.some((path) =>
-    request.nextUrl.pathname.startsWith(path)
-  );
-
-  if (isProtectedPath && !user) {
-    return NextResponse.redirect(new URL("/login", request.url));
+  // Allow API routes and signing routes
+  if (isApiRoute || isSigningRoute) {
+    return NextResponse.next();
   }
 
-  if (isAuthPath && user) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+  // Redirect logged-in users away from auth pages
+  if (isLoggedIn && isAuthRoute) {
+    return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
-  return response;
-}
+  // Redirect non-logged-in users to login for protected routes
+  if (!isLoggedIn && !isPublicRoute) {
+    const loginUrl = new URL("/login", req.url);
+    loginUrl.searchParams.set("callbackUrl", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  return NextResponse.next();
+});
 
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     * - api routes that don't need auth
-     */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
-  ],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)"],
 };

@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,7 +24,7 @@ export default function UploadPage() {
   const [isUploading, setIsUploading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
-  const supabase = createClient();
+  const { data: session } = useSession();
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -81,57 +81,35 @@ export default function UploadPage() {
       return;
     }
 
+    if (!session?.user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to upload documents.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsUploading(true);
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("title", title.trim());
 
-      if (!user) {
-        toast({
-          title: "Error",
-          description: "You must be logged in to upload documents.",
-          variant: "destructive",
-        });
-        return;
+      // Upload file via API
+      const response = await fetch("/api/documents/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Upload failed");
       }
 
-      // Generate unique filename
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
-
-      // Upload file to Supabase Storage
-      const { error: uploadError } = await supabase.storage
-        .from("documents")
-        .upload(fileName, file);
-
-      if (uploadError) {
-        throw uploadError;
-      }
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from("documents")
-        .getPublicUrl(fileName);
-
-      // Create document record
-      const { data: document, error: dbError } = await supabase
-        .from("documents")
-        .insert({
-          user_id: user.id,
-          title: title.trim(),
-          file_url: urlData.publicUrl,
-          file_name: file.name,
-          file_size: file.size,
-          status: "draft",
-        })
-        .select()
-        .single();
-
-      if (dbError) {
-        throw dbError;
-      }
+      const { document } = await response.json();
 
       toast({
         title: "Document uploaded",

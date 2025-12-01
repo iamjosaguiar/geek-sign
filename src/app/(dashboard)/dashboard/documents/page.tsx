@@ -1,4 +1,6 @@
-import { createClient } from "@/lib/supabase/server";
+import { auth } from "@/lib/auth";
+import { db, documents, recipients } from "@/lib/db";
+import { eq, desc } from "drizzle-orm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,17 +27,36 @@ import {
 import { formatDistanceToNow, formatDate } from "@/lib/utils";
 
 export default async function DocumentsPage() {
-  const supabase = createClient();
+  const session = await auth();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  if (!session?.user?.id) {
+    return null;
+  }
 
-  const { data: documents } = await supabase
-    .from("documents")
-    .select("*, recipients(id, email, status)")
-    .eq("user_id", user?.id)
-    .order("created_at", { ascending: false });
+  // Fetch documents with recipients
+  const userDocuments = await db
+    .select()
+    .from(documents)
+    .where(eq(documents.userId, session.user.id))
+    .orderBy(desc(documents.createdAt));
+
+  // Fetch recipients for all documents
+  const documentIds = userDocuments.map(d => d.id);
+  const allRecipients = documentIds.length > 0
+    ? await db.select().from(recipients).where(
+        // @ts-ignore - We'll handle the empty case
+        documentIds.length === 1
+          ? eq(recipients.documentId, documentIds[0])
+          : undefined
+      )
+    : [];
+
+  // Group recipients by document
+  const recipientsByDocument = allRecipients.reduce((acc, r) => {
+    if (!acc[r.documentId]) acc[r.documentId] = [];
+    acc[r.documentId].push(r);
+    return acc;
+  }, {} as Record<string, typeof allRecipients>);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -52,10 +73,10 @@ export default async function DocumentsPage() {
     }
   };
 
-  const getRecipientStatus = (recipients: { status: string }[] | null) => {
-    if (!recipients || recipients.length === 0) return "No recipients";
-    const signed = recipients.filter((r) => r.status === "signed").length;
-    return `${signed}/${recipients.length} signed`;
+  const getRecipientStatus = (docRecipients: typeof allRecipients | undefined) => {
+    if (!docRecipients || docRecipients.length === 0) return "No recipients";
+    const signed = docRecipients.filter((r) => r.status === "signed").length;
+    return `${signed}/${docRecipients.length} signed`;
   };
 
   return (
@@ -104,11 +125,11 @@ export default async function DocumentsPage() {
         <CardHeader>
           <CardTitle>Documents</CardTitle>
           <CardDescription>
-            {documents?.length || 0} total documents
+            {userDocuments?.length || 0} total documents
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {documents && documents.length > 0 ? (
+          {userDocuments && userDocuments.length > 0 ? (
             <div className="space-y-2">
               {/* Table Header */}
               <div className="hidden md:grid md:grid-cols-12 gap-4 px-4 py-2 text-sm font-medium text-muted-foreground border-b">
@@ -120,7 +141,7 @@ export default async function DocumentsPage() {
               </div>
 
               {/* Document Rows */}
-              {documents.map((doc) => (
+              {userDocuments.map((doc) => (
                 <div
                   key={doc.id}
                   className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center rounded-lg border p-4 hover:bg-muted/50 transition-colors"
@@ -133,7 +154,7 @@ export default async function DocumentsPage() {
                     <div className="min-w-0">
                       <p className="font-medium truncate">{doc.title}</p>
                       <p className="text-sm text-muted-foreground truncate">
-                        {doc.file_name}
+                        {doc.fileName}
                       </p>
                     </div>
                   </div>
@@ -147,14 +168,14 @@ export default async function DocumentsPage() {
                   {/* Recipients */}
                   <div className="md:col-span-2 text-sm text-muted-foreground">
                     <span className="md:hidden text-muted-foreground mr-2">Recipients:</span>
-                    {getRecipientStatus(doc.recipients)}
+                    {getRecipientStatus(recipientsByDocument[doc.id])}
                   </div>
 
                   {/* Created Date */}
                   <div className="md:col-span-2 text-sm text-muted-foreground">
                     <span className="md:hidden mr-2">Created:</span>
-                    <span title={formatDate(doc.created_at)}>
-                      {formatDistanceToNow(new Date(doc.created_at))} ago
+                    <span title={formatDate(doc.createdAt)}>
+                      {formatDistanceToNow(new Date(doc.createdAt))} ago
                     </span>
                   </div>
 

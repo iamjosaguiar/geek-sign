@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,57 +16,32 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Camera, Save } from "lucide-react";
-import type { Profile } from "@/types";
-import type { User } from "@supabase/supabase-js";
 
 export default function SettingsPage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const { data: session, status } = useSession();
   const [fullName, setFullName] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
-  const supabase = createClient();
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) return;
-
-      setUser(user);
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-
-      if (profile) {
-        setProfile(profile);
-        setFullName(profile.full_name || "");
-      }
-
-      setIsLoading(false);
-    };
-
-    fetchProfile();
-  }, [supabase]);
+    if (session?.user?.name) {
+      setFullName(session.user.name);
+    }
+  }, [session]);
 
   const handleSaveProfile = async () => {
-    if (!user) return;
+    if (!session?.user) return;
 
     setIsSaving(true);
 
     try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ full_name: fullName })
-        .eq("id", user.id);
+      const response = await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: fullName }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) throw new Error("Failed to update profile");
 
       toast({
         title: "Profile updated",
@@ -84,7 +59,7 @@ export default function SettingsPage() {
   };
 
   const getInitials = (name: string | null | undefined) => {
-    if (!name) return user?.email?.charAt(0).toUpperCase() || "U";
+    if (!name) return session?.user?.email?.charAt(0).toUpperCase() || "U";
     return name
       .split(" ")
       .map((n) => n.charAt(0))
@@ -93,7 +68,7 @@ export default function SettingsPage() {
       .slice(0, 2);
   };
 
-  if (isLoading) {
+  if (status === "loading") {
     return (
       <div className="flex h-[50vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -123,11 +98,11 @@ export default function SettingsPage() {
           <div className="flex items-center gap-4">
             <Avatar className="h-20 w-20">
               <AvatarImage
-                src={profile?.avatar_url || undefined}
+                src={session?.user?.image || undefined}
                 alt={fullName}
               />
               <AvatarFallback className="text-lg">
-                {getInitials(profile?.full_name)}
+                {getInitials(session?.user?.name)}
               </AvatarFallback>
             </Avatar>
             <Button variant="outline" size="sm">
@@ -153,7 +128,7 @@ export default function SettingsPage() {
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
-                value={user?.email || ""}
+                value={session?.user?.email || ""}
                 disabled
                 className="bg-muted"
               />

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,60 +41,57 @@ import {
   Sparkles,
   Mail,
 } from "lucide-react";
-import type { Profile } from "@/types";
 
 interface TeamMember {
   id: string;
-  user_id: string;
+  userId: string;
   role: string;
-  profiles: {
-    full_name: string | null;
+  user: {
+    name: string | null;
     email: string;
-    avatar_url: string | null;
+    image: string | null;
   };
 }
 
 export default function TeamPage() {
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const { data: session, status } = useSession();
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [inviteEmail, setInviteEmail] = useState("");
   const [isInviting, setIsInviting] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const [userPlan, setUserPlan] = useState("free");
   const { toast } = useToast();
-  const supabase = createClient();
 
   useEffect(() => {
     const fetchData = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      if (!session?.user) return;
 
-      if (!user) return;
+      try {
+        // Fetch user profile for plan
+        const profileResponse = await fetch("/api/user/profile");
+        if (profileResponse.ok) {
+          const profile = await profileResponse.json();
+          setUserPlan(profile.plan || "free");
+        }
 
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-
-      setProfile(profileData);
-
-      // If user has a team, fetch team members
-      if (profileData?.team_id) {
-        const { data: members } = await supabase
-          .from("team_members")
-          .select("*, profiles(full_name, email, avatar_url)")
-          .eq("team_id", profileData.team_id);
-
-        setTeamMembers(members || []);
+        // Fetch team members
+        const teamResponse = await fetch("/api/team/members");
+        if (teamResponse.ok) {
+          const data = await teamResponse.json();
+          setTeamMembers(data.members || []);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setIsLoading(false);
       }
-
-      setIsLoading(false);
     };
 
-    fetchData();
-  }, [supabase]);
+    if (status !== "loading") {
+      fetchData();
+    }
+  }, [session, status]);
 
   const handleInvite = async () => {
     if (!inviteEmail.trim()) {
@@ -133,7 +130,7 @@ export default function TeamPage() {
     return email.charAt(0).toUpperCase();
   };
 
-  if (isLoading) {
+  if (status === "loading" || isLoading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -142,7 +139,7 @@ export default function TeamPage() {
   }
 
   // Show upgrade prompt for free users
-  if (profile?.plan === "free") {
+  if (userPlan === "free") {
     return (
       <div className="space-y-8">
         <div>
@@ -261,21 +258,21 @@ export default function TeamPage() {
                   <div className="flex items-center gap-4">
                     <Avatar>
                       <AvatarImage
-                        src={member.profiles.avatar_url || undefined}
+                        src={member.user.image || undefined}
                       />
                       <AvatarFallback>
                         {getInitials(
-                          member.profiles.full_name,
-                          member.profiles.email
+                          member.user.name,
+                          member.user.email
                         )}
                       </AvatarFallback>
                     </Avatar>
                     <div>
                       <p className="font-medium">
-                        {member.profiles.full_name || member.profiles.email}
+                        {member.user.name || member.user.email}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {member.profiles.email}
+                        {member.user.email}
                       </p>
                     </div>
                   </div>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +13,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
@@ -26,14 +25,42 @@ import {
   Calendar,
   Type,
   CheckSquare,
-  User,
-  GripVertical,
 } from "lucide-react";
 import Link from "next/link";
-import type { Document, Recipient, DocumentField } from "@/types";
 
 interface EditorPageProps {
   params: { id: string };
+}
+
+interface Document {
+  id: string;
+  title: string;
+  fileName: string | null;
+  fileUrl: string | null;
+  status: string;
+}
+
+interface Recipient {
+  id: string;
+  documentId: string;
+  email: string;
+  name: string | null;
+  status: string;
+  orderIndex: number;
+}
+
+interface DocumentField {
+  id: string;
+  documentId: string;
+  recipientId: string;
+  type: string;
+  page: number;
+  xPosition: number;
+  yPosition: number;
+  width: number;
+  height: number;
+  required: boolean;
+  value: string | null;
 }
 
 const fieldTypes = [
@@ -51,44 +78,41 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
   const [newRecipientEmail, setNewRecipientEmail] = useState("");
   const [newRecipientName, setNewRecipientName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [selectedFieldType, setSelectedFieldType] = useState<string>("signature");
   const router = useRouter();
   const { toast } = useToast();
-  const supabase = createClient();
+  const { data: session, status } = useSession();
 
   useEffect(() => {
     const fetchDocument = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      if (status === "loading") return;
 
-      if (!user) {
+      if (!session?.user) {
         router.push("/login");
         return;
       }
 
-      const { data: doc } = await supabase
-        .from("documents")
-        .select("*, recipients(*), document_fields(*)")
-        .eq("id", params.id)
-        .eq("user_id", user.id)
-        .single();
+      try {
+        const response = await fetch(`/api/documents/${params.id}`);
+        if (!response.ok) {
+          router.push("/dashboard/documents");
+          return;
+        }
 
-      if (!doc) {
+        const data = await response.json();
+        setDocument(data.document);
+        setRecipients(data.recipients || []);
+        setFields(data.fields || []);
+      } catch (error) {
         router.push("/dashboard/documents");
-        return;
+      } finally {
+        setIsLoading(false);
       }
-
-      setDocument(doc);
-      setRecipients(doc.recipients || []);
-      setFields(doc.document_fields || []);
-      setIsLoading(false);
     };
 
     fetchDocument();
-  }, [params.id, router, supabase]);
+  }, [params.id, router, session, status]);
 
   const addRecipient = async () => {
     if (!newRecipientEmail.trim()) {
@@ -100,108 +124,110 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
       return;
     }
 
-    const { data, error } = await supabase
-      .from("recipients")
-      .insert({
-        document_id: params.id,
-        email: newRecipientEmail.trim(),
-        name: newRecipientName.trim() || null,
-        order_index: recipients.length,
-      })
-      .select()
-      .single();
+    try {
+      const response = await fetch(`/api/documents/${params.id}/recipients`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: newRecipientEmail.trim(),
+          name: newRecipientName.trim() || null,
+          orderIndex: recipients.length,
+        }),
+      });
 
-    if (error) {
+      if (!response.ok) throw new Error("Failed to add recipient");
+
+      const data = await response.json();
+      setRecipients([...recipients, data.recipient]);
+      setNewRecipientEmail("");
+      setNewRecipientName("");
+
+      toast({
+        title: "Recipient added",
+        description: `${newRecipientEmail} has been added.`,
+      });
+    } catch (error) {
       toast({
         title: "Error",
         description: "Failed to add recipient.",
         variant: "destructive",
       });
-      return;
     }
-
-    setRecipients([...recipients, data]);
-    setNewRecipientEmail("");
-    setNewRecipientName("");
-
-    toast({
-      title: "Recipient added",
-      description: `${newRecipientEmail} has been added.`,
-    });
   };
 
   const removeRecipient = async (id: string) => {
-    const { error } = await supabase
-      .from("recipients")
-      .delete()
-      .eq("id", id);
+    try {
+      const response = await fetch(`/api/documents/${params.id}/recipients/${id}`, {
+        method: "DELETE",
+      });
 
-    if (error) {
+      if (!response.ok) throw new Error("Failed to remove recipient");
+
+      setRecipients(recipients.filter((r) => r.id !== id));
+
+      toast({
+        title: "Recipient removed",
+        description: "The recipient has been removed.",
+      });
+    } catch (error) {
       toast({
         title: "Error",
         description: "Failed to remove recipient.",
         variant: "destructive",
       });
-      return;
     }
-
-    setRecipients(recipients.filter((r) => r.id !== id));
-
-    toast({
-      title: "Recipient removed",
-      description: "The recipient has been removed.",
-    });
   };
 
   const addField = async (recipientId: string) => {
-    const { data, error } = await supabase
-      .from("document_fields")
-      .insert({
-        document_id: params.id,
-        recipient_id: recipientId,
-        type: selectedFieldType,
-        page: 1,
-        x_position: 100,
-        y_position: 100,
-        width: selectedFieldType === "signature" ? 200 : 150,
-        height: selectedFieldType === "signature" ? 60 : 30,
-      })
-      .select()
-      .single();
+    try {
+      const response = await fetch(`/api/documents/${params.id}/fields`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipientId,
+          type: selectedFieldType,
+          page: 1,
+          xPosition: 100,
+          yPosition: 100,
+          width: selectedFieldType === "signature" ? 200 : 150,
+          height: selectedFieldType === "signature" ? 60 : 30,
+        }),
+      });
 
-    if (error) {
+      if (!response.ok) throw new Error("Failed to add field");
+
+      const data = await response.json();
+      setFields([...fields, data.field]);
+
+      toast({
+        title: "Field added",
+        description: `${selectedFieldType} field has been added.`,
+      });
+    } catch (error) {
       toast({
         title: "Error",
         description: "Failed to add field.",
         variant: "destructive",
       });
-      return;
     }
-
-    setFields([...fields, data]);
-
-    toast({
-      title: "Field added",
-      description: `${selectedFieldType} field has been added.`,
-    });
   };
 
   const removeField = async (id: string) => {
-    const { error } = await supabase
-      .from("document_fields")
-      .delete()
-      .eq("id", id);
+    try {
+      const response = await fetch(`/api/documents/${params.id}/fields/${id}`, {
+        method: "DELETE",
+      });
 
-    if (error) {
+      if (!response.ok) throw new Error("Failed to remove field");
+
+      setFields(fields.filter((f) => f.id !== id));
+    } catch (error) {
       toast({
         title: "Error",
         description: "Failed to remove field.",
         variant: "destructive",
       });
-      return;
     }
-
-    setFields(fields.filter((f) => f.id !== id));
   };
 
   const sendForSigning = async () => {
@@ -217,20 +243,11 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
     setIsSending(true);
 
     try {
-      // Update document status to pending
-      const { error } = await supabase
-        .from("documents")
-        .update({ status: "pending" })
-        .eq("id", params.id);
-
-      if (error) throw error;
-
-      // Create audit log
-      await supabase.from("audit_logs").insert({
-        document_id: params.id,
-        action: "sent",
-        details: { recipients: recipients.map((r) => r.email) },
+      const response = await fetch(`/api/documents/${params.id}/send`, {
+        method: "POST",
       });
+
+      if (!response.ok) throw new Error("Failed to send document");
 
       toast({
         title: "Document sent",
@@ -249,7 +266,7 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
     }
   };
 
-  if (isLoading) {
+  if (status === "loading" || isLoading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -326,15 +343,15 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
 
                 {/* Placed Fields */}
                 {fields.map((field) => {
-                  const recipient = recipients.find((r) => r.id === field.recipient_id);
+                  const recipient = recipients.find((r) => r.id === field.recipientId);
                   const FieldIcon = getFieldIcon(field.type);
                   return (
                     <div
                       key={field.id}
                       className="absolute border-2 border-primary bg-primary/10 rounded cursor-move flex items-center justify-center group"
                       style={{
-                        left: field.x_position,
-                        top: field.y_position,
+                        left: field.xPosition,
+                        top: field.yPosition,
                         width: field.width,
                         height: field.height,
                       }}
@@ -494,7 +511,7 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
               <CardContent>
                 <div className="space-y-2">
                   {fields.map((field) => {
-                    const recipient = recipients.find((r) => r.id === field.recipient_id);
+                    const recipient = recipients.find((r) => r.id === field.recipientId);
                     const FieldIcon = getFieldIcon(field.type);
                     return (
                       <div

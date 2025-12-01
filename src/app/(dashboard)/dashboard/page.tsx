@@ -1,4 +1,6 @@
-import { createClient } from "@/lib/supabase/server";
+import { auth } from "@/lib/auth";
+import { db, documents } from "@/lib/db";
+import { eq, and, desc, count } from "drizzle-orm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,56 +16,54 @@ import {
 import { formatDistanceToNow } from "@/lib/utils";
 
 export default async function DashboardPage() {
-  const supabase = createClient();
+  const session = await auth();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  if (!session?.user?.id) {
+    return null;
+  }
 
   // Fetch document stats
-  const { count: totalDocuments } = await supabase
-    .from("documents")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", user?.id);
+  const [totalResult] = await db
+    .select({ count: count() })
+    .from(documents)
+    .where(eq(documents.userId, session.user.id));
 
-  const { count: pendingDocuments } = await supabase
-    .from("documents")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", user?.id)
-    .eq("status", "pending");
+  const [pendingResult] = await db
+    .select({ count: count() })
+    .from(documents)
+    .where(and(eq(documents.userId, session.user.id), eq(documents.status, "pending")));
 
-  const { count: completedDocuments } = await supabase
-    .from("documents")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", user?.id)
-    .eq("status", "completed");
+  const [completedResult] = await db
+    .select({ count: count() })
+    .from(documents)
+    .where(and(eq(documents.userId, session.user.id), eq(documents.status, "completed")));
 
   // Fetch recent documents
-  const { data: recentDocuments } = await supabase
-    .from("documents")
-    .select("*")
-    .eq("user_id", user?.id)
-    .order("created_at", { ascending: false })
+  const recentDocuments = await db
+    .select()
+    .from(documents)
+    .where(eq(documents.userId, session.user.id))
+    .orderBy(desc(documents.createdAt))
     .limit(5);
 
   const stats = [
     {
       name: "Total Documents",
-      value: totalDocuments || 0,
+      value: totalResult?.count || 0,
       icon: FileText,
       color: "text-blue-600",
       bgColor: "bg-blue-100",
     },
     {
       name: "Pending",
-      value: pendingDocuments || 0,
+      value: pendingResult?.count || 0,
       icon: Clock,
       color: "text-amber-600",
       bgColor: "bg-amber-100",
     },
     {
       name: "Completed",
-      value: completedDocuments || 0,
+      value: completedResult?.count || 0,
       icon: CheckCircle2,
       color: "text-green-600",
       bgColor: "bg-green-100",
@@ -181,7 +181,7 @@ export default async function DashboardPage() {
                     <div>
                       <p className="font-medium">{doc.title}</p>
                       <p className="text-sm text-muted-foreground">
-                        {formatDistanceToNow(new Date(doc.created_at))} ago
+                        {formatDistanceToNow(new Date(doc.createdAt))} ago
                       </p>
                     </div>
                   </div>

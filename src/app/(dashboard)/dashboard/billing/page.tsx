@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,46 +13,48 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, Check, CreditCard, FileText, Sparkles } from "lucide-react";
 import { plans, plansConfig } from "@/config/plans";
-import type { Profile } from "@/types";
+import type { Plan } from "@/types";
 
 export default function BillingPage() {
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const { data: session, status } = useSession();
   const [isLoading, setIsLoading] = useState(true);
   const [documentCount, setDocumentCount] = useState(0);
-  const supabase = createClient();
+  const [userPlan, setUserPlan] = useState<Plan>("free");
 
   useEffect(() => {
     const fetchData = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      if (!session?.user) return;
 
-      if (!user) return;
+      try {
+        // Fetch document count
+        const response = await fetch("/api/documents/count");
+        if (response.ok) {
+          const data = await response.json();
+          setDocumentCount(data.count || 0);
+        }
 
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-
-      const { count } = await supabase
-        .from("documents")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id);
-
-      setProfile(profileData);
-      setDocumentCount(count || 0);
-      setIsLoading(false);
+        // Fetch user profile for plan
+        const profileResponse = await fetch("/api/user/profile");
+        if (profileResponse.ok) {
+          const profile = await profileResponse.json();
+          setUserPlan(profile.plan || "free");
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    fetchData();
-  }, [supabase]);
+    if (status !== "loading") {
+      fetchData();
+    }
+  }, [session, status]);
 
-  if (isLoading) {
+  if (status === "loading" || isLoading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -60,7 +62,7 @@ export default function BillingPage() {
     );
   }
 
-  const currentPlan = profile?.plan || "free";
+  const currentPlan = userPlan;
   const currentPlanConfig = plansConfig[currentPlan];
 
   return (
@@ -249,7 +251,7 @@ export default function BillingPage() {
                   <CreditCard className="h-6 w-6" />
                 </div>
                 <div>
-                  <p className="font-medium">•••• •••• •••• 4242</p>
+                  <p className="font-medium">**** **** **** 4242</p>
                   <p className="text-sm text-muted-foreground">
                     Expires 12/25
                   </p>
