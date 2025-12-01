@@ -8,12 +8,12 @@ export type FieldType = "signature" | "initials" | "date" | "text" | "checkbox";
 
 export interface Profile {
   id: string;
-  email: string;
+  email?: string;
   full_name: string | null;
   avatar_url: string | null;
   company_name: string | null;
-  custom_branding: CustomBranding | null;
   plan: Plan;
+  team_id: string | null;
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
   created_at: string;
@@ -46,10 +46,11 @@ export interface TeamMember {
 
 export interface Document {
   id: string;
-  owner_id: string;
+  user_id: string;
   team_id: string | null;
   title: string;
-  file_path: string;
+  file_url: string;
+  file_name: string;
   file_size: number | null;
   page_count: number | null;
   status: DocumentStatus;
@@ -59,7 +60,7 @@ export interface Document {
   completed_at: string | null;
   expires_at: string | null;
   recipients?: Recipient[];
-  fields?: DocumentField[];
+  document_fields?: DocumentField[];
 }
 
 export interface Recipient {
@@ -68,9 +69,9 @@ export interface Recipient {
   email: string;
   name: string | null;
   phone: string | null;
-  signing_order: number;
+  order_index: number;
   status: RecipientStatus;
-  access_token: string;
+  signing_token: string;
   signed_at: string | null;
   viewed_at: string | null;
   ip_address: string | null;
@@ -83,9 +84,9 @@ export interface DocumentField {
   document_id: string;
   recipient_id: string;
   type: FieldType;
-  page_number: number;
-  x: number;
-  y: number;
+  page: number;
+  x_position: number;
+  y_position: number;
   width: number;
   height: number;
   required: boolean;
@@ -96,11 +97,11 @@ export interface DocumentField {
 
 export interface Template {
   id: string;
-  owner_id: string;
+  user_id: string;
   team_id: string | null;
-  title: string;
+  name: string;
   description: string | null;
-  file_path: string;
+  file_url: string;
   fields: TemplateField[] | null;
   recipient_roles: string[] | null;
   created_at: string;
