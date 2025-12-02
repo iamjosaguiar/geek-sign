@@ -344,6 +344,29 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
     }
   }, [params.id]);
 
+  const updateFieldSize = useCallback(async (id: string, width: number, height: number) => {
+    // Optimistic update
+    setFields(prev => prev.map(f =>
+      f.id === id ? { ...f, width: Math.round(width), height: Math.round(height) } : f
+    ));
+
+    // Don't make API call for temp fields
+    if (id.startsWith("temp-")) return;
+
+    try {
+      await fetch(`/api/documents/${params.id}/fields/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          width: Math.round(width),
+          height: Math.round(height),
+        }),
+      });
+    } catch (error) {
+      console.error("Failed to update field size:", error);
+    }
+  }, [params.id]);
+
   const removeField = async (id: string) => {
     const fieldToRemove = fields.find(f => f.id === id);
     setFields(prev => prev.filter(f => f.id !== id));
@@ -582,6 +605,7 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
                               isSelected={selectedFieldId === field.id}
                               onSelect={() => setSelectedFieldId(field.id)}
                               onPositionChange={updateFieldPosition}
+                              onResize={updateFieldSize}
                               onDelete={removeField}
                               scale={scale}
                             />
