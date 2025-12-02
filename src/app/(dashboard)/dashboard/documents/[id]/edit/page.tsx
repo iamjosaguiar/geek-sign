@@ -568,8 +568,7 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
                       <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                     </div>
                   )}
-                  {/* Wrapper with CSS to disable pointer events on PDF text/annotation layers */}
-                  <div className="[&_.react-pdf__Page__textContent]:pointer-events-none [&_.react-pdf__Page__annotations]:pointer-events-none">
+                  <div>
                     <Document
                       file={document.fileUrl}
                       onLoadSuccess={onDocumentLoadSuccess}

@@ -58,6 +58,12 @@
   }
 }
 
+/* Disable pointer events on react-pdf text and annotation layers for field dragging */
+.react-pdf__Page__textContent,
+.react-pdf__Page__annotations {
+  pointer-events: none !important;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
