@@ -186,6 +186,7 @@ export function DraggableField({
   return (
     <div
       ref={fieldRef}
+      data-field-id={field.id}
       className={cn(
         "absolute border-2 rounded select-none",
         colors.bg,
@@ -202,7 +203,11 @@ export function DraggableField({
       }}
       onClick={(e) => {
         e.stopPropagation();
+        e.preventDefault();
         onSelect?.();
+      }}
+      onMouseDown={(e) => {
+        e.stopPropagation();
       }}
     >
       {/* Main drag area - the entire field */}

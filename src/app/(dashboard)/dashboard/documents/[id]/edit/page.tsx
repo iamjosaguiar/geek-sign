@@ -249,6 +249,12 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
 
   const handlePageClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
+      // Only create field if clicking directly on the PDF container, not on existing fields
+      const target = e.target as HTMLElement;
+      if (target.closest('[data-field-id]')) {
+        return; // Clicked on a field, don't create new one
+      }
+
       if (!selectedRecipientId || !pageContainerRef.current) return;
 
       const rect = pageContainerRef.current.getBoundingClientRect();
@@ -576,43 +582,46 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
                     />
                   </Document>
 
-                  {/* Fields overlay */}
+                  {/* Fields overlay - no CSS transform, positions are scaled directly */}
                   <div
-                    className="absolute top-0 left-0 pointer-events-none"
+                    className="absolute top-0 left-0"
                     style={{
                       width: pageSize.width * scale,
                       height: pageSize.height * scale,
                     }}
                   >
-                    <div
-                      style={{
-                        transform: `scale(${scale})`,
-                        transformOrigin: "top left",
-                        width: pageSize.width,
-                        height: pageSize.height,
-                        position: "relative",
-                      }}
-                    >
-                      {currentPageFields.map((field) => {
-                        const recipient = recipients.find(r => r.id === field.recipientId);
-                        const recipientIndex = getRecipientIndex(field.recipientId);
-                        return (
-                          <div key={field.id} className="pointer-events-auto">
-                            <DraggableField
-                              field={field}
-                              recipientName={recipient?.name || recipient?.email}
-                              recipientColor={String(recipientIndex)}
-                              isSelected={selectedFieldId === field.id}
-                              onSelect={() => setSelectedFieldId(field.id)}
-                              onPositionChange={updateFieldPosition}
-                              onResize={updateFieldSize}
-                              onDelete={removeField}
-                              scale={scale}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
+                    {currentPageFields.map((field) => {
+                      const recipient = recipients.find(r => r.id === field.recipientId);
+                      const recipientIndex = getRecipientIndex(field.recipientId);
+                      // Apply scale to field position and size for display
+                      const scaledField = {
+                        ...field,
+                        xPosition: field.xPosition * scale,
+                        yPosition: field.yPosition * scale,
+                        width: field.width * scale,
+                        height: field.height * scale,
+                      };
+                      return (
+                        <DraggableField
+                          key={field.id}
+                          field={scaledField}
+                          recipientName={recipient?.name || recipient?.email}
+                          recipientColor={String(recipientIndex)}
+                          isSelected={selectedFieldId === field.id}
+                          onSelect={() => setSelectedFieldId(field.id)}
+                          onPositionChange={(id, x, y) => {
+                            // Convert back from scaled to unscaled coordinates
+                            updateFieldPosition(id, x / scale, y / scale);
+                          }}
+                          onResize={(id, w, h) => {
+                            // Convert back from scaled to unscaled size
+                            updateFieldSize(id, w / scale, h / scale);
+                          }}
+                          onDelete={removeField}
+                          scale={1} // Scale is now applied to the field data directly
+                        />
+                      );
+                    })}
                   </div>
                 </div>
               ) : (
