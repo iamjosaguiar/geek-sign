@@ -13,7 +13,7 @@ async function seedUsers() {
       plan: "free",
     },
     {
-      email: "admin@ambrit.com.au",
+      email: "andy@theandylife.com",
       name: "Admin",
       password,
       plan: "free",

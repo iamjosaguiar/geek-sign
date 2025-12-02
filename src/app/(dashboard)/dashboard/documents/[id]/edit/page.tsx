@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
@@ -20,24 +21,39 @@ import {
   Trash2,
   Send,
   Loader2,
-  FileText,
   Pen,
   Calendar,
   Type,
   CheckSquare,
+  User,
+  Mail,
+  MapPin,
+  FileText,
+  ChevronLeft,
+  ChevronRight,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import Link from "next/link";
+import { Document, Page, pdfjs } from "react-pdf";
+import "react-pdf/dist/Page/AnnotationLayer.css";
+import "react-pdf/dist/Page/TextLayer.css";
+import { DraggableField, recipientColors, type FieldData } from "@/components/pdf/draggable-field";
+
+// Set up PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface EditorPageProps {
   params: { id: string };
 }
 
-interface Document {
+interface DocumentData {
   id: string;
   title: string;
   fileName: string | null;
   fileUrl: string | null;
   status: string;
+  pageCount: number | null;
 }
 
 interface Recipient {
@@ -64,22 +80,37 @@ interface DocumentField {
 }
 
 const fieldTypes = [
-  { type: "signature", label: "Signature", icon: Pen },
-  { type: "initials", label: "Initials", icon: Type },
-  { type: "date", label: "Date", icon: Calendar },
-  { type: "text", label: "Text", icon: Type },
-  { type: "checkbox", label: "Checkbox", icon: CheckSquare },
+  { type: "signature", label: "Signature", icon: Pen, width: 200, height: 60 },
+  { type: "initials", label: "Initials", icon: Type, width: 80, height: 40 },
+  { type: "date", label: "Date", icon: Calendar, width: 120, height: 30 },
+  { type: "name", label: "Name", icon: User, width: 150, height: 30 },
+  { type: "email", label: "Email", icon: Mail, width: 180, height: 30 },
+  { type: "address", label: "Address", icon: MapPin, width: 200, height: 30 },
+  { type: "title", label: "Title", icon: User, width: 150, height: 30 },
+  { type: "checkbox", label: "Checkbox", icon: CheckSquare, width: 24, height: 24 },
 ];
 
 export default function DocumentEditorPage({ params }: EditorPageProps) {
-  const [document, setDocument] = useState<Document | null>(null);
+  const [document, setDocument] = useState<DocumentData | null>(null);
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [fields, setFields] = useState<DocumentField[]>([]);
   const [newRecipientEmail, setNewRecipientEmail] = useState("");
   const [newRecipientName, setNewRecipientName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(null);
   const [selectedFieldType, setSelectedFieldType] = useState<string>("signature");
+  const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
+  const [autoRelease, setAutoRelease] = useState(true);
+
+  // PDF state
+  const [numPages, setNumPages] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [scale, setScale] = useState(1);
+  const [pdfLoading, setPdfLoading] = useState(true);
+  const [pageSize, setPageSize] = useState({ width: 612, height: 792 }); // Default letter size
+  const pageContainerRef = useRef<HTMLDivElement>(null);
+
   const router = useRouter();
   const { toast } = useToast();
   const { data: session, status } = useSession();
@@ -104,6 +135,11 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
         setDocument(data.document);
         setRecipients(data.recipients || []);
         setFields(data.fields || []);
+
+        // Auto-select first recipient if available
+        if (data.recipients?.length > 0) {
+          setSelectedRecipientId(data.recipients[0].id);
+        }
       } catch (error) {
         router.push("/dashboard/documents");
       } finally {
@@ -124,29 +160,49 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
       return;
     }
 
+    // Optimistic update
+    const tempId = `temp-${Date.now()}`;
+    const newRecipient: Recipient = {
+      id: tempId,
+      documentId: params.id,
+      email: newRecipientEmail.trim(),
+      name: newRecipientName.trim() || null,
+      status: "pending",
+      orderIndex: recipients.length,
+    };
+
+    setRecipients([...recipients, newRecipient]);
+    setNewRecipientEmail("");
+    setNewRecipientName("");
+
+    // Auto-select newly added recipient
+    setSelectedRecipientId(tempId);
+
     try {
       const response = await fetch(`/api/documents/${params.id}/recipients`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: newRecipientEmail.trim(),
-          name: newRecipientName.trim() || null,
-          orderIndex: recipients.length,
+          email: newRecipient.email,
+          name: newRecipient.name,
+          orderIndex: newRecipient.orderIndex,
         }),
       });
 
       if (!response.ok) throw new Error("Failed to add recipient");
 
       const data = await response.json();
-      setRecipients([...recipients, data.recipient]);
-      setNewRecipientEmail("");
-      setNewRecipientName("");
+      // Replace temp recipient with real one
+      setRecipients(prev => prev.map(r => r.id === tempId ? data.recipient : r));
+      setSelectedRecipientId(data.recipient.id);
 
       toast({
         title: "Recipient added",
-        description: `${newRecipientEmail} has been added.`,
+        description: `${newRecipient.email} has been added.`,
       });
     } catch (error) {
+      // Rollback optimistic update
+      setRecipients(prev => prev.filter(r => r.id !== tempId));
       toast({
         title: "Error",
         description: "Failed to add recipient.",
@@ -156,6 +212,17 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
   };
 
   const removeRecipient = async (id: string) => {
+    const recipientToRemove = recipients.find(r => r.id === id);
+
+    // Remove recipient and their fields optimistically
+    setRecipients(prev => prev.filter(r => r.id !== id));
+    setFields(prev => prev.filter(f => f.recipientId !== id));
+
+    if (selectedRecipientId === id) {
+      const remaining = recipients.filter(r => r.id !== id);
+      setSelectedRecipientId(remaining.length > 0 ? remaining[0].id : null);
+    }
+
     try {
       const response = await fetch(`/api/documents/${params.id}/recipients/${id}`, {
         method: "DELETE",
@@ -163,13 +230,15 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
 
       if (!response.ok) throw new Error("Failed to remove recipient");
 
-      setRecipients(recipients.filter((r) => r.id !== id));
-
       toast({
         title: "Recipient removed",
         description: "The recipient has been removed.",
       });
     } catch (error) {
+      // Rollback
+      if (recipientToRemove) {
+        setRecipients(prev => [...prev, recipientToRemove]);
+      }
       toast({
         title: "Error",
         description: "Failed to remove recipient.",
@@ -178,7 +247,50 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
     }
   };
 
-  const addField = async (recipientId: string) => {
+  const handlePageClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!selectedRecipientId || !pageContainerRef.current) return;
+
+      const rect = pageContainerRef.current.getBoundingClientRect();
+      const fieldType = fieldTypes.find(f => f.type === selectedFieldType);
+      if (!fieldType) return;
+
+      // Calculate click position relative to the unscaled PDF
+      const x = (e.clientX - rect.left) / scale;
+      const y = (e.clientY - rect.top) / scale;
+
+      // Center the field on click position
+      const xPosition = Math.max(0, x - fieldType.width / 2);
+      const yPosition = Math.max(0, y - fieldType.height / 2);
+
+      addField(selectedRecipientId, xPosition, yPosition);
+    },
+    [selectedRecipientId, selectedFieldType, scale, currentPage]
+  );
+
+  const addField = async (recipientId: string, x: number, y: number) => {
+    const fieldType = fieldTypes.find(f => f.type === selectedFieldType);
+    if (!fieldType) return;
+
+    // Optimistic update
+    const tempId = `temp-${Date.now()}`;
+    const newField: DocumentField = {
+      id: tempId,
+      documentId: params.id,
+      recipientId,
+      type: selectedFieldType,
+      page: currentPage,
+      xPosition: Math.round(x),
+      yPosition: Math.round(y),
+      width: fieldType.width,
+      height: fieldType.height,
+      required: true,
+      value: null,
+    };
+
+    setFields(prev => [...prev, newField]);
+    setSelectedFieldId(tempId);
+
     try {
       const response = await fetch(`/api/documents/${params.id}/fields`, {
         method: "POST",
@@ -186,24 +298,21 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
         body: JSON.stringify({
           recipientId,
           type: selectedFieldType,
-          page: 1,
-          xPosition: 100,
-          yPosition: 100,
-          width: selectedFieldType === "signature" ? 200 : 150,
-          height: selectedFieldType === "signature" ? 60 : 30,
+          page: currentPage,
+          xPosition: newField.xPosition,
+          yPosition: newField.yPosition,
+          width: newField.width,
+          height: newField.height,
         }),
       });
 
       if (!response.ok) throw new Error("Failed to add field");
 
       const data = await response.json();
-      setFields([...fields, data.field]);
-
-      toast({
-        title: "Field added",
-        description: `${selectedFieldType} field has been added.`,
-      });
+      setFields(prev => prev.map(f => f.id === tempId ? data.field : f));
+      setSelectedFieldId(data.field.id);
     } catch (error) {
+      setFields(prev => prev.filter(f => f.id !== tempId));
       toast({
         title: "Error",
         description: "Failed to add field.",
@@ -212,16 +321,45 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
     }
   };
 
+  const updateFieldPosition = useCallback(async (id: string, x: number, y: number) => {
+    // Optimistic update
+    setFields(prev => prev.map(f =>
+      f.id === id ? { ...f, xPosition: Math.round(x), yPosition: Math.round(y) } : f
+    ));
+
+    // Don't make API call for temp fields
+    if (id.startsWith("temp-")) return;
+
+    try {
+      await fetch(`/api/documents/${params.id}/fields/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          xPosition: Math.round(x),
+          yPosition: Math.round(y),
+        }),
+      });
+    } catch (error) {
+      console.error("Failed to update field position:", error);
+    }
+  }, [params.id]);
+
   const removeField = async (id: string) => {
+    const fieldToRemove = fields.find(f => f.id === id);
+    setFields(prev => prev.filter(f => f.id !== id));
+
+    if (id.startsWith("temp-")) return;
+
     try {
       const response = await fetch(`/api/documents/${params.id}/fields/${id}`, {
         method: "DELETE",
       });
 
       if (!response.ok) throw new Error("Failed to remove field");
-
-      setFields(fields.filter((f) => f.id !== id));
     } catch (error) {
+      if (fieldToRemove) {
+        setFields(prev => [...prev, fieldToRemove]);
+      }
       toast({
         title: "Error",
         description: "Failed to remove field.",
@@ -235,6 +373,15 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
       toast({
         title: "No recipients",
         description: "Please add at least one recipient.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (fields.length === 0) {
+      toast({
+        title: "No fields",
+        description: "Please add at least one signature field.",
         variant: "destructive",
       });
       return;
@@ -266,6 +413,23 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
     }
   };
 
+  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    setNumPages(numPages);
+    setPdfLoading(false);
+  };
+
+  const onPageLoadSuccess = (page: { width: number; height: number }) => {
+    setPageSize({ width: page.width, height: page.height });
+  };
+
+  // Get fields for current page
+  const currentPageFields = fields.filter(f => f.page === currentPage);
+
+  // Get recipient index for coloring
+  const getRecipientIndex = (recipientId: string) => {
+    return recipients.findIndex(r => r.id === recipientId);
+  };
+
   if (status === "loading" || isLoading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
@@ -278,271 +442,379 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
     return null;
   }
 
-  const getFieldIcon = (type: string) => {
-    const fieldType = fieldTypes.find((f) => f.type === type);
-    return fieldType?.icon || Type;
-  };
-
   return (
-    <div className="space-y-6">
+    <div className="h-[calc(100vh-4rem)] flex flex-col">
       {/* Header */}
-      <div className="flex flex-col gap-4">
-        <Button variant="ghost" size="sm" className="w-fit" asChild>
-          <Link href={`/dashboard/documents/${params.id}`}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Document
-          </Link>
-        </Button>
-
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center justify-between border-b px-4 py-3 bg-background">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" asChild>
+            <Link href={`/dashboard/documents/${params.id}`}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Link>
+          </Button>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              Edit: {document.title}
-            </h1>
-            <p className="text-muted-foreground">
-              Add recipients and signature fields
+            <h1 className="text-lg font-semibold">{document.title}</h1>
+            <p className="text-sm text-muted-foreground">
+              Add recipients and place signature fields
             </p>
           </div>
-
-          <Button onClick={sendForSigning} disabled={isSending || recipients.length === 0}>
-            {isSending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Sending...
-              </>
-            ) : (
-              <>
-                <Send className="mr-2 h-4 w-4" />
-                Send for Signing
-              </>
-            )}
-          </Button>
         </div>
+
+        <Button onClick={sendForSigning} disabled={isSending || recipients.length === 0 || fields.length === 0}>
+          {isSending ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Sending...
+            </>
+          ) : (
+            <>
+              <Send className="mr-2 h-4 w-4" />
+              Send for Signing
+            </>
+          )}
+        </Button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Document Preview */}
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Document Preview</CardTitle>
-              <CardDescription>
-                Click on the document to place signature fields
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="relative aspect-[8.5/11] rounded-lg border bg-white">
-                {/* PDF Preview placeholder */}
-                <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
-                  <div className="text-center">
-                    <FileText className="h-16 w-16 mx-auto mb-4" />
-                    <p>PDF Preview</p>
-                    <p className="text-sm">Drag and drop fields onto the document</p>
-                  </div>
-                </div>
+      <div className="flex-1 flex overflow-hidden">
+        {/* PDF Preview */}
+        <div className="flex-1 flex flex-col bg-gray-100">
+          {/* PDF Controls */}
+          <div className="flex items-center justify-between border-b bg-background px-4 py-2">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage <= 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-sm min-w-[100px] text-center">
+                Page {currentPage} of {numPages || "..."}
+              </span>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setCurrentPage(p => Math.min(numPages, p + 1))}
+                disabled={currentPage >= numPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
 
-                {/* Placed Fields */}
-                {fields.map((field) => {
-                  const recipient = recipients.find((r) => r.id === field.recipientId);
-                  const FieldIcon = getFieldIcon(field.type);
-                  return (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setScale(s => Math.max(0.5, s - 0.1))}
+                disabled={scale <= 0.5}
+              >
+                <ZoomOut className="h-4 w-4" />
+              </Button>
+              <span className="text-sm w-16 text-center">{Math.round(scale * 100)}%</span>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setScale(s => Math.min(2, s + 0.1))}
+                disabled={scale >= 2}
+              >
+                <ZoomIn className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* PDF Document */}
+          <div className="flex-1 overflow-auto p-4">
+            <div className="flex justify-center">
+              {document.fileUrl ? (
+                <div
+                  ref={pageContainerRef}
+                  className="relative shadow-lg bg-white"
+                  onClick={handlePageClick}
+                  style={{ cursor: selectedRecipientId ? "crosshair" : "default" }}
+                >
+                  {pdfLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
+                  <Document
+                    file={document.fileUrl}
+                    onLoadSuccess={onDocumentLoadSuccess}
+                    loading={null}
+                  >
+                    <Page
+                      pageNumber={currentPage}
+                      scale={scale}
+                      onLoadSuccess={onPageLoadSuccess}
+                      renderTextLayer={true}
+                      renderAnnotationLayer={true}
+                    />
+                  </Document>
+
+                  {/* Fields overlay */}
+                  <div
+                    className="absolute top-0 left-0 pointer-events-none"
+                    style={{
+                      width: pageSize.width * scale,
+                      height: pageSize.height * scale,
+                    }}
+                  >
                     <div
-                      key={field.id}
-                      className="absolute border-2 border-primary bg-primary/10 rounded cursor-move flex items-center justify-center group"
                       style={{
-                        left: field.xPosition,
-                        top: field.yPosition,
-                        width: field.width,
-                        height: field.height,
+                        transform: `scale(${scale})`,
+                        transformOrigin: "top left",
+                        width: pageSize.width,
+                        height: pageSize.height,
+                        position: "relative",
                       }}
                     >
-                      <div className="flex items-center gap-1 text-xs text-primary">
-                        <FieldIcon className="h-4 w-4" />
-                        <span className="capitalize">{field.type}</span>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => removeField(field.id)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
+                      {currentPageFields.map((field) => {
+                        const recipient = recipients.find(r => r.id === field.recipientId);
+                        const recipientIndex = getRecipientIndex(field.recipientId);
+                        return (
+                          <div key={field.id} className="pointer-events-auto">
+                            <DraggableField
+                              field={field}
+                              recipientName={recipient?.name || recipient?.email}
+                              recipientColor={String(recipientIndex)}
+                              isSelected={selectedFieldId === field.id}
+                              onSelect={() => setSelectedFieldId(field.id)}
+                              onPositionChange={updateFieldPosition}
+                              onDelete={removeField}
+                              scale={scale}
+                            />
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
+                  </div>
+                </div>
+              ) : (
+                <div className="aspect-[8.5/11] w-full max-w-2xl bg-white rounded-lg shadow-lg flex items-center justify-center">
+                  <div className="text-center text-muted-foreground">
+                    <FileText className="h-16 w-16 mx-auto mb-4" />
+                    <p>No PDF uploaded</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Add Recipient */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Recipients</CardTitle>
-              <CardDescription>
-                Add people who need to sign this document
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <Label htmlFor="recipientName">Name (optional)</Label>
-                  <Input
-                    id="recipientName"
-                    placeholder="John Doe"
-                    value={newRecipientName}
-                    onChange={(e) => setNewRecipientName(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="recipientEmail">Email</Label>
-                  <Input
-                    id="recipientEmail"
-                    type="email"
-                    placeholder="john@example.com"
-                    value={newRecipientEmail}
-                    onChange={(e) => setNewRecipientEmail(e.target.value)}
-                  />
-                </div>
-                <Button onClick={addRecipient} className="w-full">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Recipient
-                </Button>
-              </div>
-
-              {recipients.length > 0 && (
-                <div className="space-y-2 pt-4 border-t">
-                  {recipients.map((recipient, index) => (
-                    <div
-                      key={recipient.id}
-                      className="flex items-center justify-between rounded-lg border p-3"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium">
-                          {index + 1}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">
-                            {recipient.name || recipient.email}
-                          </p>
-                          {recipient.name && (
-                            <p className="text-xs text-muted-foreground">
-                              {recipient.email}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeRecipient(recipient.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Field Types */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Signature Fields</CardTitle>
-              <CardDescription>
-                Select a field type and assign to a recipient
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Field Type Selector */}
-              <div className="grid grid-cols-2 gap-2">
-                {fieldTypes.map((field) => (
-                  <Button
-                    key={field.type}
-                    variant={selectedFieldType === field.type ? "default" : "outline"}
-                    size="sm"
-                    className="justify-start"
-                    onClick={() => setSelectedFieldType(field.type)}
-                  >
-                    <field.icon className="mr-2 h-4 w-4" />
-                    {field.label}
+        <div className="w-80 border-l bg-background overflow-y-auto">
+          <div className="p-4 space-y-6">
+            {/* Field Selection */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Field Selection</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Add Recipient Button */}
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      placeholder="Name"
+                      value={newRecipientName}
+                      onChange={(e) => setNewRecipientName(e.target.value)}
+                      className="text-sm"
+                    />
+                    <Input
+                      placeholder="Email"
+                      type="email"
+                      value={newRecipientEmail}
+                      onChange={(e) => setNewRecipientEmail(e.target.value)}
+                      className="text-sm"
+                    />
+                  </div>
+                  <Button variant="outline" className="w-full" onClick={addRecipient}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add new recipient
                   </Button>
-                ))}
-              </div>
+                </div>
 
-              {/* Add Field to Recipient */}
-              {recipients.length > 0 ? (
-                <div className="space-y-2 pt-4 border-t">
-                  <Label>Add to recipient:</Label>
-                  {recipients.map((recipient) => (
-                    <Button
-                      key={recipient.id}
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start"
-                      onClick={() => addField(recipient.id)}
+                {/* Auto-release checkbox */}
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="auto-release"
+                    checked={autoRelease}
+                    onCheckedChange={(checked) => setAutoRelease(!!checked)}
+                  />
+                  <label
+                    htmlFor="auto-release"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Auto-release signatures when complete
+                  </label>
+                </div>
+
+                {/* Select Recipient */}
+                {recipients.length > 0 && (
+                  <div>
+                    <Label className="text-sm font-medium">Select Recipient:</Label>
+                    <select
+                      className="mt-1 w-full border rounded-md px-3 py-2 text-sm bg-background"
+                      value={selectedRecipientId || ""}
+                      onChange={(e) => setSelectedRecipientId(e.target.value || null)}
                     >
-                      <Plus className="mr-2 h-4 w-4" />
-                      {recipient.name || recipient.email}
+                      <option value="">None</option>
+                      {recipients.map((recipient, index) => (
+                        <option key={recipient.id} value={recipient.id}>
+                          {recipient.name || recipient.email}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Field Type Buttons */}
+                <div className="space-y-2">
+                  {fieldTypes.map((field) => (
+                    <Button
+                      key={field.type}
+                      variant={selectedFieldType === field.type ? "default" : "outline"}
+                      className="w-full justify-start"
+                      onClick={() => setSelectedFieldType(field.type)}
+                      disabled={!selectedRecipientId}
+                    >
+                      <field.icon className="mr-2 h-4 w-4" />
+                      {field.label}
                     </Button>
                   ))}
                 </div>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  Add recipients first to assign fields
-                </p>
-              )}
-            </CardContent>
-          </Card>
 
-          {/* Fields Summary */}
-          {fields.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Added Fields</CardTitle>
-                <CardDescription>
-                  {fields.length} field(s) added
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {fields.map((field) => {
-                    const recipient = recipients.find((r) => r.id === field.recipientId);
-                    const FieldIcon = getFieldIcon(field.type);
+                {!selectedRecipientId && recipients.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-2">
+                    Add a recipient to start placing fields
+                  </p>
+                )}
+
+                {!selectedRecipientId && recipients.length > 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-2">
+                    Select a recipient to place fields
+                  </p>
+                )}
+
+                {selectedRecipientId && (
+                  <p className="text-sm text-muted-foreground text-center py-2">
+                    Click on the PDF to place a {selectedFieldType} field
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Recipients List */}
+            {recipients.length > 0 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Recipients ({recipients.length})</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {recipients.map((recipient, index) => {
+                    const colors = recipientColors[index % recipientColors.length];
+                    const recipientFields = fields.filter(f => f.recipientId === recipient.id);
                     return (
                       <div
-                        key={field.id}
-                        className="flex items-center justify-between rounded-lg border p-2"
+                        key={recipient.id}
+                        className={`flex items-center justify-between rounded-lg border p-3 cursor-pointer transition-colors ${
+                          selectedRecipientId === recipient.id ? colors.bg + " " + colors.border : ""
+                        }`}
+                        onClick={() => setSelectedRecipientId(recipient.id)}
                       >
-                        <div className="flex items-center gap-2">
-                          <FieldIcon className="h-4 w-4 text-muted-foreground" />
-                          <div>
-                            <p className="text-sm font-medium capitalize">
-                              {field.type}
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div
+                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white text-sm font-medium ${
+                              colors.border.replace("border-", "bg-")
+                            }`}
+                          >
+                            {index + 1}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">
+                              {recipient.name || recipient.email}
                             </p>
+                            {recipient.name && (
+                              <p className="text-xs text-muted-foreground truncate">
+                                {recipient.email}
+                              </p>
+                            )}
                             <p className="text-xs text-muted-foreground">
-                              {recipient?.name || recipient?.email || "Unassigned"}
+                              {recipientFields.length} field(s)
                             </p>
                           </div>
                         </div>
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => removeField(field.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeRecipient(recipient.id);
+                          }}
                         >
                           <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
                         </Button>
                       </div>
                     );
                   })}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Fields Summary */}
+            {fields.length > 0 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Placed Fields ({fields.length})</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {fields.map((field) => {
+                      const recipient = recipients.find(r => r.id === field.recipientId);
+                      const recipientIndex = getRecipientIndex(field.recipientId);
+                      const colors = recipientColors[recipientIndex % recipientColors.length];
+                      const FieldIcon = fieldTypes.find(f => f.type === field.type)?.icon || Type;
+                      return (
+                        <div
+                          key={field.id}
+                          className={`flex items-center justify-between rounded-lg border p-2 cursor-pointer ${
+                            selectedFieldId === field.id ? "ring-2 ring-primary" : ""
+                          }`}
+                          onClick={() => {
+                            setSelectedFieldId(field.id);
+                            setCurrentPage(field.page);
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className={`p-1 rounded ${colors.bg}`}>
+                              <FieldIcon className={`h-4 w-4 ${colors.text}`} />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium capitalize">{field.type}</p>
+                              <p className="text-xs text-muted-foreground">
+                                Page {field.page} • {recipient?.name || recipient?.email || "Unassigned"}
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeField(field.id);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
       </div>
     </div>
