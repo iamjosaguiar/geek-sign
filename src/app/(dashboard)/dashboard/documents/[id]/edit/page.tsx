@@ -568,19 +568,22 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
                       <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                     </div>
                   )}
-                  <Document
-                    file={document.fileUrl}
-                    onLoadSuccess={onDocumentLoadSuccess}
-                    loading={null}
-                  >
-                    <Page
-                      pageNumber={currentPage}
-                      scale={scale}
-                      onLoadSuccess={onPageLoadSuccess}
-                      renderTextLayer={true}
-                      renderAnnotationLayer={true}
-                    />
-                  </Document>
+                  {/* Wrapper with CSS to disable pointer events on PDF text/annotation layers */}
+                  <div className="[&_.react-pdf__Page__textContent]:pointer-events-none [&_.react-pdf__Page__annotations]:pointer-events-none">
+                    <Document
+                      file={document.fileUrl}
+                      onLoadSuccess={onDocumentLoadSuccess}
+                      loading={null}
+                    >
+                      <Page
+                        pageNumber={currentPage}
+                        scale={scale}
+                        onLoadSuccess={onPageLoadSuccess}
+                        renderTextLayer={true}
+                        renderAnnotationLayer={true}
+                      />
+                    </Document>
+                  </div>
 
                   {/* Fields overlay - no CSS transform, positions are scaled directly */}
                   <div
