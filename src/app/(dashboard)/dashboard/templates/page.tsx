@@ -1,9 +1,16 @@
-import { auth } from "@/lib/auth";
-import { db, templates } from "@/lib/db";
-import { eq, desc } from "drizzle-orm";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   FolderOpen,
   Plus,
@@ -12,6 +19,9 @@ import {
   Copy,
   Edit,
   Trash2,
+  Loader2,
+  AlertTriangle,
+  Sparkles,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -20,20 +30,211 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
-export default async function TemplatesPage() {
-  const session = await auth();
+interface Template {
+  id: string;
+  name: string;
+  description: string | null;
+  fileUrl: string | null;
+  createdAt: string;
+}
 
-  if (!session?.user?.id) {
-    return null;
+interface PlanLimits {
+  templates: {
+    used: number;
+    limit: number;
+    canCreate: boolean;
+  };
+  planConfig: {
+    name: string;
+  };
+}
+
+export default function TemplatesPage() {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [planLimits, setPlanLimits] = useState<PlanLimits | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [useTemplateId, setUseTemplateId] = useState<string | null>(null);
+  const [useTemplateData, setUseTemplateData] = useState({
+    title: "",
+    recipients: "",
+    customMessage: "",
+  });
+  const [isCreatingDocument, setIsCreatingDocument] = useState(false);
+
+  useEffect(() => {
+    fetchTemplates();
+    fetchPlanLimits();
+  }, []);
+
+  const fetchTemplates = async () => {
+    try {
+      const response = await fetch("/api/templates");
+      if (response.ok) {
+        const data = await response.json();
+        setTemplates(data);
+      }
+    } catch (error) {
+      console.error("Error fetching templates:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchPlanLimits = async () => {
+    try {
+      const response = await fetch("/api/user/plan-limits");
+      if (response.ok) {
+        const data = await response.json();
+        setPlanLimits(data);
+      }
+    } catch (error) {
+      console.error("Error fetching plan limits:", error);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/templates/${deleteId}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        setTemplates(templates.filter((t) => t.id !== deleteId));
+        toast({
+          title: "Template deleted",
+          description: "The template has been permanently deleted.",
+        });
+      } else {
+        const data = await response.json();
+        toast({
+          title: "Error",
+          description: data.error || "Failed to delete template",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Delete error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete template",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+      setDeleteId(null);
+    }
+  };
+
+  const handleUseTemplate = async () => {
+    if (!useTemplateId) return;
+
+    const recipientEmails = useTemplateData.recipients
+      .split(",")
+      .map((e) => e.trim())
+      .filter((e) => e);
+
+    if (!useTemplateData.title) {
+      toast({
+        title: "Title required",
+        description: "Please enter a document title",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (recipientEmails.length === 0) {
+      toast({
+        title: "Recipients required",
+        description: "Please enter at least one recipient email",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsCreatingDocument(true);
+    try {
+      const response = await fetch(`/api/templates/${useTemplateId}/use`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: useTemplateData.title,
+          recipientEmails: recipientEmails.map((email) => ({ email })),
+          customMessage: useTemplateData.customMessage || undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: "Document created",
+          description: "Redirecting to document editor...",
+        });
+        router.push(`/dashboard/documents/${data.document.id}/edit`);
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to create document from template",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Use template error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create document from template",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreatingDocument(false);
+      setUseTemplateId(null);
+      setUseTemplateData({ title: "", recipients: "", customMessage: "" });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
 
-  const userTemplates = await db
-    .select()
-    .from(templates)
-    .where(eq(templates.userId, session.user.id))
-    .orderBy(desc(templates.createdAt));
+  const canCreateMore = planLimits?.templates.canCreate ?? true;
+  const templateLimit = planLimits?.templates.limit ?? -1;
+  const templateUsed = planLimits?.templates.used ?? 0;
 
   return (
     <div className="space-y-8">
@@ -45,18 +246,53 @@ export default async function TemplatesPage() {
             Create reusable templates for frequently used documents
           </p>
         </div>
-        <Button asChild>
-          <Link href="/dashboard/templates/new">
-            <Plus className="mr-2 h-4 w-4" />
-            Create Template
-          </Link>
-        </Button>
+        <div className="flex items-center gap-4">
+          {templateLimit !== -1 && (
+            <Badge variant="outline" className="text-sm">
+              {templateUsed} / {templateLimit} templates
+            </Badge>
+          )}
+          {canCreateMore ? (
+            <Button asChild>
+              <Link href="/dashboard/templates/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Create Template
+              </Link>
+            </Button>
+          ) : (
+            <Button asChild>
+              <Link href="/dashboard/billing">
+                <Sparkles className="mr-2 h-4 w-4" />
+                Upgrade for More
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
 
+      {/* Limit Warning */}
+      {!canCreateMore && (
+        <Card className="border-amber-500/50 bg-amber-500/5">
+          <CardContent className="flex items-center gap-4 py-4">
+            <AlertTriangle className="h-5 w-5 text-amber-500" />
+            <div className="flex-1">
+              <p className="font-medium">Template limit reached</p>
+              <p className="text-sm text-muted-foreground">
+                Your {planLimits?.planConfig.name} allows {templateLimit} template(s).
+                Upgrade your plan for unlimited templates.
+              </p>
+            </div>
+            <Button variant="outline" asChild>
+              <Link href="/dashboard/billing">Upgrade</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Templates Grid */}
-      {userTemplates && userTemplates.length > 0 ? (
+      {templates && templates.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {userTemplates.map((template) => (
+          {templates.map((template) => (
             <Card key={template.id} className="group">
               <CardHeader className="flex flex-row items-start justify-between">
                 <div className="flex items-center gap-3">
@@ -81,16 +317,30 @@ export default async function TemplatesPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setUseTemplateId(template.id);
+                        setUseTemplateData({
+                          title: template.name,
+                          recipients: "",
+                          customMessage: "",
+                        });
+                      }}
+                    >
                       <Copy className="mr-2 h-4 w-4" />
                       Use Template
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Edit className="mr-2 h-4 w-4" />
-                      Edit
+                    <DropdownMenuItem asChild>
+                      <Link href={`/dashboard/templates/${template.id}/edit`}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit
+                      </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-destructive">
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      onClick={() => setDeleteId(template.id)}
+                    >
                       <Trash2 className="mr-2 h-4 w-4" />
                       Delete
                     </DropdownMenuItem>
@@ -101,6 +351,11 @@ export default async function TemplatesPage() {
                 <p className="text-sm text-muted-foreground line-clamp-2">
                   {template.description || "No description provided"}
                 </p>
+                {template.fileUrl && (
+                  <Badge variant="secondary" className="mt-2">
+                    PDF attached
+                  </Badge>
+                )}
               </CardContent>
             </Card>
           ))}
@@ -115,15 +370,120 @@ export default async function TemplatesPage() {
             <p className="text-sm text-muted-foreground mb-4 text-center max-w-sm">
               Create a template to save time on documents you send frequently
             </p>
-            <Button asChild>
-              <Link href="/dashboard/templates/new">
-                <Plus className="mr-2 h-4 w-4" />
-                Create Template
-              </Link>
-            </Button>
+            {canCreateMore && (
+              <Button asChild>
+                <Link href="/dashboard/templates/new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Template
+                </Link>
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Template</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this template? This action cannot
+              be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Use Template Dialog */}
+      <Dialog
+        open={!!useTemplateId}
+        onOpenChange={() => {
+          setUseTemplateId(null);
+          setUseTemplateData({ title: "", recipients: "", customMessage: "" });
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Document from Template</DialogTitle>
+            <DialogDescription>
+              Enter the details for your new document
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Document Title</Label>
+              <Input
+                id="title"
+                value={useTemplateData.title}
+                onChange={(e) =>
+                  setUseTemplateData({ ...useTemplateData, title: e.target.value })
+                }
+                placeholder="Enter document title"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="recipients">
+                Recipient Emails (comma-separated)
+              </Label>
+              <Input
+                id="recipients"
+                value={useTemplateData.recipients}
+                onChange={(e) =>
+                  setUseTemplateData({
+                    ...useTemplateData,
+                    recipients: e.target.value,
+                  })
+                }
+                placeholder="email1@example.com, email2@example.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="message">Custom Message (optional)</Label>
+              <Textarea
+                id="message"
+                value={useTemplateData.customMessage}
+                onChange={(e) =>
+                  setUseTemplateData({
+                    ...useTemplateData,
+                    customMessage: e.target.value,
+                  })
+                }
+                placeholder="Add a personal message to recipients"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setUseTemplateId(null)}
+              disabled={isCreatingDocument}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleUseTemplate} disabled={isCreatingDocument}>
+              {isCreatingDocument ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              Create Document
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

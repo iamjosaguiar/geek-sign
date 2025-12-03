@@ -28,10 +28,13 @@ const providers: Provider[] = [
 
         const { email, password } = parsed.data;
 
+        // Normalize email to lowercase for case-insensitive login
+        const normalizedEmail = email.toLowerCase().trim();
+
         const [user] = await db
           .select()
           .from(users)
-          .where(eq(users.email, email))
+          .where(eq(users.email, normalizedEmail))
           .limit(1);
 
         if (!user || !user.password) return null;

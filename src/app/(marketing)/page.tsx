@@ -245,19 +245,19 @@ export default function HomePage() {
         <div className="flex flex-wrap items-center justify-center gap-8 md:gap-16">
           <div className="flex items-center gap-2 text-muted-foreground">
             <Shield className="h-5 w-5" />
-            <span className="text-sm font-medium">ESIGN Compliant</span>
+            <span className="text-sm font-medium">ESIGN Act & UETA Compliant</span>
           </div>
           <div className="flex items-center gap-2 text-muted-foreground">
             <Lock className="h-5 w-5" />
-            <span className="text-sm font-medium">256-bit Encryption</span>
+            <span className="text-sm font-medium">Secure Cloud Storage</span>
           </div>
           <div className="flex items-center gap-2 text-muted-foreground">
             <Zap className="h-5 w-5" />
-            <span className="text-sm font-medium">99.9% Uptime</span>
+            <span className="text-sm font-medium">Instant Delivery</span>
           </div>
           <div className="flex items-center gap-2 text-muted-foreground">
             <CheckCircle2 className="h-5 w-5" />
-            <span className="text-sm font-medium">SOC 2 Ready</span>
+            <span className="text-sm font-medium">Complete Audit Trail</span>
           </div>
         </div>
       </section>

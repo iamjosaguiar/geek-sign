@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { db, documents, recipients, documentFields, auditLogs } from "@/lib/db";
 import { eq, and, desc } from "drizzle-orm";
 import { notFound } from "next/navigation";
+import dynamic from "next/dynamic";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,8 +10,6 @@ import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import {
   ArrowLeft,
-  Download,
-  Send,
   Edit,
   Trash2,
   FileText,
@@ -19,8 +18,38 @@ import {
   CheckCircle2,
   XCircle,
   Mail,
+  Loader2,
 } from "lucide-react";
 import { formatDate, formatDistanceToNow } from "@/lib/utils";
+import { SendDocumentButton } from "@/components/documents/send-document-button";
+import { ResendEmailsButton } from "@/components/documents/resend-emails-button";
+import { DownloadButton } from "@/components/documents/download-button";
+
+// Dynamically import PDF preview to avoid SSR issues
+const DocumentPreview = dynamic(
+  () => import("@/components/pdf/document-preview").then((mod) => mod.DocumentPreview),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="aspect-[8.5/11] rounded-lg border bg-muted flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    ),
+  }
+);
+
+// Signed document preview with signature overlays
+const SignedDocumentPreview = dynamic(
+  () => import("@/components/pdf/signed-document-preview").then((mod) => mod.SignedDocumentPreview),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="aspect-[8.5/11] rounded-lg border bg-muted flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    ),
+  }
+);
 
 interface DocumentPageProps {
   params: { id: string };
@@ -129,16 +158,21 @@ export default async function DocumentPage({ params }: DocumentPageProps) {
                     Edit
                   </Link>
                 </Button>
-                <Button>
-                  <Send className="mr-2 h-4 w-4" />
-                  Send for Signing
-                </Button>
+                <SendDocumentButton
+                  documentId={document.id}
+                  hasRecipients={docRecipients.length > 0}
+                  hasFields={docFields.length > 0}
+                />
               </>
             )}
-            <Button variant="outline">
-              <Download className="mr-2 h-4 w-4" />
-              Download
-            </Button>
+            {document.status === "pending" && (
+              <ResendEmailsButton documentId={document.id} />
+            )}
+            <DownloadButton
+              documentId={document.id}
+              documentTitle={document.title}
+              isCompleted={document.status === "completed"}
+            />
           </div>
         </div>
       </div>
@@ -150,15 +184,29 @@ export default async function DocumentPage({ params }: DocumentPageProps) {
           <Card>
             <CardHeader>
               <CardTitle>Document Preview</CardTitle>
+              {(document.status === "completed" || document.status === "pending") && docFields.some(f => f.value) && (
+                <CardDescription>Showing signed fields as overlays</CardDescription>
+              )}
             </CardHeader>
             <CardContent>
-              <div className="aspect-[8.5/11] rounded-lg border bg-muted flex items-center justify-center">
-                <div className="text-center text-muted-foreground">
-                  <FileText className="h-16 w-16 mx-auto mb-4" />
-                  <p>PDF Preview</p>
-                  <p className="text-sm">Preview will be displayed here</p>
-                </div>
-              </div>
+              {(document.status === "completed" || document.status === "pending") && docFields.some(f => f.value) ? (
+                <SignedDocumentPreview
+                  fileUrl={document.fileUrl}
+                  fields={docFields.map(f => ({
+                    id: f.id,
+                    type: f.type,
+                    page: f.page,
+                    xPosition: f.xPosition,
+                    yPosition: f.yPosition,
+                    width: f.width,
+                    height: f.height,
+                    value: f.value,
+                    recipientId: f.recipientId,
+                  }))}
+                />
+              ) : (
+                <DocumentPreview fileUrl={document.fileUrl} />
+              )}
             </CardContent>
           </Card>
 

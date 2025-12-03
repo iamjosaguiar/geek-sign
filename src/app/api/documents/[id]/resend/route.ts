@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { documents, recipients, documentFields, users, auditLogs } from "@/lib/db/schema";
+import { documents, recipients, users } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
-import {
-  sendSignerInviteEmail,
-  sendSenderDocumentSentEmail,
-} from "@/lib/email";
+import { sendSignerInviteEmail } from "@/lib/email";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://sign.houseofgeeks.online";
 
@@ -31,7 +28,7 @@ export async function POST(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Verify document ownership
+    // Verify document ownership and status
     const [document] = await db
       .select()
       .from(documents)
@@ -43,55 +40,34 @@ export async function POST(
       return NextResponse.json({ error: "Document not found" }, { status: 404 });
     }
 
-    // Check if document has recipients
+    if (document.status !== "pending") {
+      return NextResponse.json(
+        { error: "Can only resend emails for pending documents" },
+        { status: 400 }
+      );
+    }
+
+    // Get all recipients who haven't signed yet (pending or viewed)
     const documentRecipients = await db
       .select()
       .from(recipients)
       .where(eq(recipients.documentId, params.id));
 
-    if (documentRecipients.length === 0) {
+    // Filter to only recipients who haven't signed
+    const pendingRecipients = documentRecipients.filter(
+      (r) => r.status !== "signed" && r.status !== "declined"
+    );
+
+    if (pendingRecipients.length === 0) {
       return NextResponse.json(
-        { error: "Document must have at least one recipient" },
+        { error: "All recipients have already signed or declined" },
         { status: 400 }
       );
     }
 
-    // Check if document has fields
-    const fields = await db
-      .select()
-      .from(documentFields)
-      .where(eq(documentFields.documentId, params.id));
-
-    if (fields.length === 0) {
-      return NextResponse.json(
-        { error: "Document must have at least one field" },
-        { status: 400 }
-      );
-    }
-
-    // Update document status to pending
-    const [updatedDocument] = await db
-      .update(documents)
-      .set({
-        status: "pending",
-        updatedAt: new Date(),
-      })
-      .where(eq(documents.id, params.id))
-      .returning();
-
-    // Log the send action
-    await db.insert(auditLogs).values({
-      documentId: params.id,
-      action: "document_sent",
-      details: {
-        recipientCount: documentRecipients.length,
-        recipientEmails: documentRecipients.map((r) => r.email),
-      },
-    });
-
-    // Send email invitations to all recipients
+    // Send email invitations to pending recipients
     const senderName = user.name || user.email;
-    const emailPromises = documentRecipients.map((recipient) => {
+    const emailPromises = pendingRecipients.map((recipient) => {
       const signUrl = `${APP_URL}/sign/${recipient.signingToken}`;
       return sendSignerInviteEmail({
         signerName: recipient.name,
@@ -103,20 +79,7 @@ export async function POST(
       });
     });
 
-    // Send confirmation to sender
-    const documentUrl = `${APP_URL}/dashboard/documents/${document.id}`;
-    emailPromises.push(
-      sendSenderDocumentSentEmail({
-        senderName,
-        senderEmail: user.email,
-        documentTitle: document.title,
-        recipientCount: documentRecipients.length,
-        recipientEmails: documentRecipients.map((r) => r.email),
-        documentUrl,
-      })
-    );
-
-    // Wait for all emails to be sent (don't fail if emails fail)
+    // Wait for all emails to be sent
     const emailResults = await Promise.allSettled(emailPromises);
     const successfulEmails = emailResults.filter(
       (r) => r.status === "fulfilled" && r.value === true
@@ -128,16 +91,14 @@ export async function POST(
     }
 
     return NextResponse.json({
-      document: updatedDocument,
-      recipients: documentRecipients,
-      message: "Document sent for signing",
+      message: "Emails resent",
       emailsSent: successfulEmails,
       emailsFailed: failedEmails,
     });
   } catch (error) {
-    console.error("Send document error:", error);
+    console.error("Resend emails error:", error);
     return NextResponse.json(
-      { error: "Failed to send document" },
+      { error: "Failed to resend emails" },
       { status: 500 }
     );
   }

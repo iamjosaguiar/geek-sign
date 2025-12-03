@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,13 +36,13 @@ import {
   ZoomOut,
 } from "lucide-react";
 import Link from "next/link";
-import { Document, Page, pdfjs } from "react-pdf";
-import "react-pdf/dist/Page/AnnotationLayer.css";
-import "react-pdf/dist/Page/TextLayer.css";
 import { DraggableField, recipientColors, type FieldData } from "@/components/pdf/draggable-field";
 
-// Set up PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+// Dynamically import PDF components to avoid SSR issues with DOMMatrix
+const PdfDocument = dynamic(
+  () => import("@/components/pdf/pdf-document").then((mod) => mod.PdfDocument),
+  { ssr: false }
+);
 
 interface EditorPageProps {
   params: { id: string };
@@ -423,18 +424,22 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
         method: "POST",
       });
 
-      if (!response.ok) throw new Error("Failed to send document");
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to send document");
+      }
 
       toast({
-        title: "Document sent",
-        description: "The document has been sent for signing.",
+        title: "Document sent!",
+        description: `${data.emailsSent || recipients.length} invitation email(s) sent successfully.`,
       });
 
       router.push(`/dashboard/documents/${params.id}`);
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to send document.",
+        description: error instanceof Error ? error.message : "Failed to send document.",
         variant: "destructive",
       });
     } finally {
@@ -569,24 +574,18 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
                     </div>
                   )}
                   <div>
-                    <Document
-                      file={document.fileUrl}
+                    <PdfDocument
+                      fileUrl={document.fileUrl}
+                      currentPage={currentPage}
+                      scale={scale}
                       onLoadSuccess={onDocumentLoadSuccess}
-                      loading={null}
-                    >
-                      <Page
-                        pageNumber={currentPage}
-                        scale={scale}
-                        onLoadSuccess={onPageLoadSuccess}
-                        renderTextLayer={true}
-                        renderAnnotationLayer={true}
-                      />
-                    </Document>
+                      onPageLoadSuccess={onPageLoadSuccess}
+                    />
                   </div>
 
                   {/* Fields overlay - no CSS transform, positions are scaled directly */}
                   <div
-                    className="absolute top-0 left-0"
+                    className="absolute top-0 left-0 pointer-events-none"
                     style={{
                       width: pageSize.width * scale,
                       height: pageSize.height * scale,

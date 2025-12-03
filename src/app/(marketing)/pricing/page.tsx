@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, X } from "lucide-react";
+import { Check, Sparkles } from "lucide-react";
 import { plans } from "@/config/plans";
 
 export default function PricingPage() {
@@ -27,51 +27,45 @@ export default function PricingPage() {
         {plans.map((plan) => (
           <Card
             key={plan.id}
-            className={`relative flex flex-col ${
-              plan.popular ? "border-primary shadow-lg scale-105" : ""
-            }`}
+            className="relative flex flex-col border rounded-xl"
           >
-            {plan.popular && (
-              <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">
-                Most Popular
-              </Badge>
-            )}
-            <CardHeader>
-              <CardTitle className="text-2xl">{plan.name}</CardTitle>
-              <CardDescription>{plan.description}</CardDescription>
-              <div className="mt-4">
+            <CardHeader className="text-center pb-2">
+              {/* Star icon for Free plan */}
+              {plan.id === "free" && (
+                <div className="absolute -top-4 right-4">
+                  <Sparkles className="h-10 w-10 text-muted-foreground/50" />
+                </div>
+              )}
+              <h2 className="text-xl font-semibold">{plan.name}</h2>
+              <div className="mt-2">
                 <span className="text-4xl font-bold">
-                  ${plan.price}
+                  ${plan.price === 0 ? "0" : plan.price.toFixed(2).replace(/\.00$/, ".99")}
                 </span>
-                {plan.price > 0 && (
-                  <span className="text-muted-foreground">/month</span>
-                )}
+                <span className="text-muted-foreground text-sm">/mo</span>
               </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                {plan.description}
+              </p>
             </CardHeader>
-            <CardContent className="flex-1">
+            <CardContent className="flex-1 pt-4">
               <ul className="space-y-3">
                 {plan.features.map((feature, index) => (
                   <li key={index} className="flex items-start gap-3">
-                    <Check className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                    <span className="text-sm">{feature}</span>
-                  </li>
-                ))}
-                {plan.notIncluded?.map((feature, index) => (
-                  <li key={index} className="flex items-start gap-3 text-muted-foreground">
-                    <X className="h-5 w-5 shrink-0 mt-0.5" />
+                    <Check className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5" />
                     <span className="text-sm">{feature}</span>
                   </li>
                 ))}
               </ul>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="pt-4">
               <Button
-                className="w-full"
-                variant={plan.popular ? "default" : "outline"}
+                className="w-full bg-zinc-900 hover:bg-zinc-800 text-white"
                 asChild
               >
                 <Link href="/signup">
-                  {plan.price === 0 ? "Get Started Free" : "Start Free Trial"}
+                  {plan.id === "free" && "Start Signing for Free"}
+                  {plan.id === "starter" && "Get Started"}
+                  {plan.id === "team" && "Upgrade to Team"}
                 </Link>
               </Button>
             </CardFooter>

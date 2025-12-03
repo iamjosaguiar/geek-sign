@@ -24,11 +24,14 @@ export async function POST(request: Request) {
 
     const { name, email, password } = parsed.data;
 
+    // Normalize email to lowercase for case-insensitive matching
+    const normalizedEmail = email.toLowerCase().trim();
+
     // Check if user already exists
     const [existingUser] = await db
       .select()
       .from(users)
-      .where(eq(users.email, email))
+      .where(eq(users.email, normalizedEmail))
       .limit(1);
 
     if (existingUser) {
@@ -45,7 +48,7 @@ export async function POST(request: Request) {
       .insert(users)
       .values({
         name,
-        email,
+        email: normalizedEmail,
         password: hashedPassword,
       })
       .returning();

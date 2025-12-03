@@ -105,6 +105,8 @@ export const documents = pgTable("documents", {
   pageCount: integer("page_count"),
   status: text("status").default("draft").notNull(),
   customMessage: text("custom_message"),
+  // Document integrity - SHA-256 hash of original PDF
+  documentHash: text("document_hash"),
   expiresAt: timestamp("expires_at"),
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -124,6 +126,12 @@ export const recipients = pgTable("recipients", {
   signedAt: timestamp("signed_at"),
   viewedAt: timestamp("viewed_at"),
   ipAddress: text("ip_address"),
+  // ESIGN Act compliance - consent tracking
+  consentGiven: boolean("consent_given").default(false),
+  consentTimestamp: timestamp("consent_timestamp"),
+  consentIpAddress: text("consent_ip_address"),
+  // Browser/device info for audit
+  userAgent: text("user_agent"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

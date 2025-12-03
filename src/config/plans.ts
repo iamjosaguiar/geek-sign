@@ -91,6 +91,13 @@ const plansConfig: Record<Plan, PlanConfig> = {
       "Invite teammates to manage documents together",
       "Shared team visibility across sent documents",
       "Centralized billing for your entire team",
+      "Unlimited templates",
+      "Email notifications on document open",
+      "Custom recipient messages",
+      "Unlimited document retention",
+      "Send docs for signature via SMS (US only)",
+      "Resize fields",
+      "Custom branding",
     ],
     limits: {
       templates: -1,
