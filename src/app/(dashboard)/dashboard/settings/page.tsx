@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,19 +14,70 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Camera, Save } from "lucide-react";
+import { Loader2, Camera, Save, Palette, Lock, Sparkles } from "lucide-react";
+
+interface PlanLimits {
+  plan: string;
+  isSuperAdmin: boolean;
+  features: {
+    customBranding: boolean;
+  };
+}
+
+interface UserProfile {
+  name: string | null;
+  companyName: string | null;
+  brandingLogoUrl: string | null;
+  brandingPrimaryColor: string | null;
+}
 
 export default function SettingsPage() {
   const { data: session, status } = useSession();
   const [fullName, setFullName] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [brandingLogoUrl, setBrandingLogoUrl] = useState("");
+  const [brandingPrimaryColor, setBrandingPrimaryColor] = useState("#000000");
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingBranding, setIsSavingBranding] = useState(false);
+  const [planLimits, setPlanLimits] = useState<PlanLimits | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     if (session?.user?.name) {
       setFullName(session.user.name);
+    }
+  }, [session]);
+
+  useEffect(() => {
+    // Fetch plan limits and profile data
+    const fetchData = async () => {
+      try {
+        const [limitsRes, profileRes] = await Promise.all([
+          fetch("/api/user/plan-limits"),
+          fetch("/api/user/profile"),
+        ]);
+
+        if (limitsRes.ok) {
+          const limits = await limitsRes.json();
+          setPlanLimits(limits);
+        }
+
+        if (profileRes.ok) {
+          const profile: UserProfile = await profileRes.json();
+          if (profile.companyName) setCompanyName(profile.companyName);
+          if (profile.brandingLogoUrl) setBrandingLogoUrl(profile.brandingLogoUrl);
+          if (profile.brandingPrimaryColor) setBrandingPrimaryColor(profile.brandingPrimaryColor);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+
+    if (session?.user) {
+      fetchData();
     }
   }, [session]);
 
@@ -38,7 +90,7 @@ export default function SettingsPage() {
       const response = await fetch("/api/user/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: fullName }),
+        body: JSON.stringify({ name: fullName, companyName }),
       });
 
       if (!response.ok) throw new Error("Failed to update profile");
@@ -58,6 +110,38 @@ export default function SettingsPage() {
     }
   };
 
+  const handleSaveBranding = async () => {
+    if (!session?.user) return;
+
+    setIsSavingBranding(true);
+
+    try {
+      const response = await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          brandingLogoUrl: brandingLogoUrl || null,
+          brandingPrimaryColor: brandingPrimaryColor || null,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to update branding");
+
+      toast({
+        title: "Branding updated",
+        description: "Your custom branding has been saved.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update branding. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingBranding(false);
+    }
+  };
+
   const getInitials = (name: string | null | undefined) => {
     if (!name) return session?.user?.email?.charAt(0).toUpperCase() || "U";
     return name
@@ -67,6 +151,8 @@ export default function SettingsPage() {
       .toUpperCase()
       .slice(0, 2);
   };
+
+  const canUseBranding = planLimits?.features?.customBranding || planLimits?.isSuperAdmin;
 
   if (status === "loading") {
     return (
@@ -125,6 +211,15 @@ export default function SettingsPage() {
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="companyName">Company Name</Label>
+              <Input
+                id="companyName"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                placeholder="Enter your company name"
+              />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
@@ -151,6 +246,124 @@ export default function SettingsPage() {
               </>
             )}
           </Button>
+        </CardContent>
+      </Card>
+
+      {/* Custom Branding */}
+      <Card className={!canUseBranding ? "opacity-75" : ""}>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Palette className="h-5 w-5" />
+                Custom Branding
+                {!canUseBranding && (
+                  <Badge variant="secondary" className="ml-2">
+                    <Lock className="mr-1 h-3 w-3" />
+                    Starter+
+                  </Badge>
+                )}
+              </CardTitle>
+              <CardDescription>
+                Customize how your documents appear to signers
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {canUseBranding ? (
+            <>
+              <div className="grid gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="brandingLogoUrl">Logo URL</Label>
+                  <Input
+                    id="brandingLogoUrl"
+                    value={brandingLogoUrl}
+                    onChange={(e) => setBrandingLogoUrl(e.target.value)}
+                    placeholder="https://example.com/logo.png"
+                    type="url"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Enter a URL to your company logo (recommended: 200x50px PNG)
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="brandingPrimaryColor">Brand Color</Label>
+                  <div className="flex gap-3">
+                    <Input
+                      id="brandingPrimaryColor"
+                      type="color"
+                      value={brandingPrimaryColor}
+                      onChange={(e) => setBrandingPrimaryColor(e.target.value)}
+                      className="w-16 h-10 p-1 cursor-pointer"
+                    />
+                    <Input
+                      value={brandingPrimaryColor}
+                      onChange={(e) => setBrandingPrimaryColor(e.target.value)}
+                      placeholder="#000000"
+                      className="flex-1"
+                      maxLength={7}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    This color will be used for buttons and links in signing emails
+                  </p>
+                </div>
+              </div>
+
+              {/* Preview */}
+              {(brandingLogoUrl || brandingPrimaryColor !== "#000000") && (
+                <div className="rounded-lg border p-4 bg-muted/30">
+                  <p className="text-sm font-medium mb-3">Preview</p>
+                  <div className="flex items-center gap-4">
+                    {brandingLogoUrl && (
+                      <img
+                        src={brandingLogoUrl}
+                        alt="Logo preview"
+                        className="h-8 max-w-[150px] object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                    )}
+                    <button
+                      className="px-4 py-2 rounded text-white text-sm font-medium"
+                      style={{ backgroundColor: brandingPrimaryColor }}
+                    >
+                      Sign Document
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <Button onClick={handleSaveBranding} disabled={isSavingBranding}>
+                {isSavingBranding ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Branding
+                  </>
+                )}
+              </Button>
+            </>
+          ) : (
+            <div className="text-center py-6">
+              <Sparkles className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground mb-4">
+                Upgrade to Starter or Team plan to customize your branding
+              </p>
+              <Button asChild>
+                <Link href="/dashboard/billing">
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Upgrade Plan
+                </Link>
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 

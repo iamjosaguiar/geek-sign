@@ -53,14 +53,24 @@ interface TeamMember {
   };
 }
 
+interface PendingInvitation {
+  id: string;
+  email: string;
+  status: string;
+  expiresAt: string;
+  createdAt: string;
+}
+
 export default function TeamPage() {
   const { data: session, status } = useSession();
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [inviteEmail, setInviteEmail] = useState("");
   const [isInviting, setIsInviting] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [userPlan, setUserPlan] = useState("free");
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -68,11 +78,12 @@ export default function TeamPage() {
       if (!session?.user) return;
 
       try {
-        // Fetch user profile for plan
-        const profileResponse = await fetch("/api/user/profile");
-        if (profileResponse.ok) {
-          const profile = await profileResponse.json();
-          setUserPlan(profile.plan || "free");
+        // Fetch plan limits (includes effective plan for super admins)
+        const limitsResponse = await fetch("/api/user/plan-limits");
+        if (limitsResponse.ok) {
+          const limits = await limitsResponse.json();
+          setUserPlan(limits.plan || "free");
+          setIsSuperAdmin(limits.isSuperAdmin || false);
         }
 
         // Fetch team members
@@ -80,6 +91,13 @@ export default function TeamPage() {
         if (teamResponse.ok) {
           const data = await teamResponse.json();
           setTeamMembers(data.members || []);
+        }
+
+        // Fetch pending invitations
+        const inviteResponse = await fetch("/api/team/invite");
+        if (inviteResponse.ok) {
+          const data = await inviteResponse.json();
+          setPendingInvitations(data.invitations || []);
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -105,17 +123,47 @@ export default function TeamPage() {
 
     setIsInviting(true);
 
-    // Simulate invite (would normally send email)
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const response = await fetch("/api/team/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: inviteEmail }),
+      });
 
-    toast({
-      title: "Invitation sent",
-      description: `An invitation has been sent to ${inviteEmail}`,
-    });
+      const data = await response.json();
 
-    setInviteEmail("");
-    setShowInviteDialog(false);
-    setIsInviting(false);
+      if (!response.ok) {
+        toast({
+          title: "Failed to send invitation",
+          description: data.error || "Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Invitation sent",
+        description: `An invitation has been sent to ${inviteEmail}`,
+      });
+
+      // Refresh pending invitations
+      const inviteResponse = await fetch("/api/team/invite");
+      if (inviteResponse.ok) {
+        const inviteData = await inviteResponse.json();
+        setPendingInvitations(inviteData.invitations || []);
+      }
+
+      setInviteEmail("");
+      setShowInviteDialog(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to send invitation. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsInviting(false);
+    }
   };
 
   const getInitials = (name: string | null | undefined, email: string) => {
@@ -138,8 +186,8 @@ export default function TeamPage() {
     );
   }
 
-  // Show upgrade prompt for free users
-  if (userPlan === "free") {
+  // Show upgrade prompt for free users (but not super admins)
+  if (userPlan === "free" && !isSuperAdmin) {
     return (
       <div className="space-y-8">
         <div>
@@ -331,9 +379,35 @@ export default function TeamPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground text-center py-8">
-            No pending invitations
-          </p>
+          {pendingInvitations.length > 0 ? (
+            <div className="space-y-4">
+              {pendingInvitations.map((invitation) => (
+                <div
+                  key={invitation.id}
+                  className="flex items-center justify-between rounded-lg border p-4"
+                >
+                  <div className="flex items-center gap-4">
+                    <Avatar>
+                      <AvatarFallback>
+                        {invitation.email.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium">{invitation.email}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Expires {new Date(invitation.expiresAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge variant="outline">Pending</Badge>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-8">
+              No pending invitations
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>

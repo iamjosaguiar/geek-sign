@@ -1,10 +1,11 @@
 import { auth } from "@/lib/auth";
-import { db, documents, recipients } from "@/lib/db";
+import { db, documents, recipients, users } from "@/lib/db";
 import { eq, desc } from "drizzle-orm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import Link from "next/link";
 import {
   FileText,
@@ -16,6 +17,8 @@ import {
   Trash2,
   Download,
   Send,
+  Clock,
+  Sparkles,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -25,6 +28,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { formatDistanceToNow, formatDate } from "@/lib/utils";
+import { plansConfig } from "@/config/plans";
+import type { Plan } from "@/types";
 
 export default async function DocumentsPage() {
   const session = await auth();
@@ -32,6 +37,21 @@ export default async function DocumentsPage() {
   if (!session?.user?.id) {
     return null;
   }
+
+  // Fetch user to check plan
+  const [user] = await db
+    .select({
+      plan: users.plan,
+      isSuperAdmin: users.isSuperAdmin,
+    })
+    .from(users)
+    .where(eq(users.id, session.user.id))
+    .limit(1);
+
+  const isSuperAdmin = user?.isSuperAdmin ?? false;
+  const effectivePlan = isSuperAdmin ? "team" : ((user?.plan || "free") as Plan);
+  const retentionDays = plansConfig[effectivePlan].limits.retentionDays;
+  const showRetentionWarning = retentionDays > 0 && !isSuperAdmin;
 
   // Fetch documents with recipients
   const userDocuments = await db
@@ -81,6 +101,24 @@ export default async function DocumentsPage() {
 
   return (
     <div className="space-y-8">
+      {/* Retention Warning for Free Users */}
+      {showRetentionWarning && (
+        <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/50">
+          <Clock className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="flex items-center justify-between">
+            <span className="text-amber-800 dark:text-amber-200">
+              Documents on the Free plan are automatically deleted after {retentionDays} days.
+            </span>
+            <Button variant="outline" size="sm" asChild className="ml-4 shrink-0">
+              <Link href="/dashboard/billing">
+                <Sparkles className="mr-2 h-3 w-3" />
+                Upgrade for Unlimited
+              </Link>
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>

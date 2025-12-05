@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { documents, recipients, documentFields, users, auditLogs } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { sendSenderDocumentViewedEmail } from "@/lib/email";
+import { plansConfig } from "@/config/plans";
+import type { Plan } from "@/types";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://sign.houseofgeeks.online";
 
@@ -89,22 +91,29 @@ export async function GET(
         details: { recipientEmail: recipient.email },
       });
 
-      // Get sender info and notify them
+      // Get sender info and notify them (only for paid plans with notifyOnOpen feature)
       const [sender] = await db
         .select()
         .from(users)
         .where(eq(users.id, document.userId));
 
       if (sender) {
-        const documentUrl = `${APP_URL}/dashboard/documents/${document.id}`;
-        await sendSenderDocumentViewedEmail({
-          senderName: sender.name || sender.email,
-          senderEmail: sender.email,
-          documentTitle: document.title,
-          viewerName: recipient.name,
-          viewerEmail: recipient.email,
-          documentUrl,
-        });
+        // Check if sender's plan has notifyOnOpen feature
+        const isSuperAdmin = sender.isSuperAdmin ?? false;
+        const effectivePlan = isSuperAdmin ? "team" : (sender.plan || "free") as Plan;
+        const planConfig = plansConfig[effectivePlan];
+
+        if (planConfig.limits.notifyOnOpen) {
+          const documentUrl = `${APP_URL}/dashboard/documents/${document.id}`;
+          await sendSenderDocumentViewedEmail({
+            senderName: sender.name || sender.email,
+            senderEmail: sender.email,
+            documentTitle: document.title,
+            viewerName: recipient.name,
+            viewerEmail: recipient.email,
+            documentUrl,
+          });
+        }
       }
     }
 

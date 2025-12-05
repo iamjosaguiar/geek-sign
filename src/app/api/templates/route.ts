@@ -50,8 +50,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const userPlan = (user.plan || "free") as Plan;
-    const planConfig = plansConfig[userPlan];
+    // Super admins get team plan features
+    const isSuperAdmin = user.isSuperAdmin ?? false;
+    const effectivePlan = isSuperAdmin ? "team" : (user.plan || "free") as Plan;
+    const planConfig = plansConfig[effectivePlan];
     const templateLimit = planConfig.limits.templates;
 
     // Count existing templates

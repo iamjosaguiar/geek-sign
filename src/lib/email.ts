@@ -59,15 +59,28 @@ export async function sendEmail({ to, subject, html, text }: EmailOptions): Prom
   }
 }
 
-// Email template wrapper
-function emailTemplate(content: string): string {
+// Custom branding options
+export interface EmailBranding {
+  logoUrl?: string | null;
+  primaryColor?: string | null;
+  companyName?: string | null;
+}
+
+// Email template wrapper with optional branding
+function emailTemplate(content: string, branding?: EmailBranding): string {
+  const headerColor = branding?.primaryColor || "#3b82f6";
+  const brandName = branding?.companyName || "Geek Sign";
+  const logoHtml = branding?.logoUrl
+    ? `<img src="${branding.logoUrl}" alt="${brandName}" style="max-height: 40px; max-width: 200px;" />`
+    : `<h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">${brandName}</h1>`;
+
   return `
     <!DOCTYPE html>
     <html>
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Geek Sign</title>
+        <title>${brandName}</title>
       </head>
       <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f4f4f5;">
         <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f5; padding: 40px 20px;">
@@ -76,8 +89,8 @@ function emailTemplate(content: string): string {
               <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                 <!-- Header -->
                 <tr>
-                  <td style="background-color: #3b82f6; padding: 24px; text-align: center;">
-                    <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">Geek Sign</h1>
+                  <td style="background-color: ${headerColor}; padding: 24px; text-align: center;">
+                    ${logoHtml}
                   </td>
                 </tr>
                 <!-- Content -->
@@ -90,7 +103,7 @@ function emailTemplate(content: string): string {
                 <tr>
                   <td style="padding: 24px; text-align: center; border-top: 1px solid #e5e7eb; background-color: #f9fafb;">
                     <p style="margin: 0 0 8px 0; font-size: 12px; color: #6b7280;">
-                      Powered by <a href="${APP_URL}" style="color: #3b82f6; text-decoration: none;">Geek Sign</a>
+                      Powered by <a href="${APP_URL}" style="color: ${headerColor}; text-decoration: none;">Geek Sign</a>
                     </p>
                     <p style="margin: 0; font-size: 12px; color: #9ca3af;">
                       Free, secure e-signatures for everyone
@@ -126,6 +139,7 @@ interface SignerInviteEmailProps {
   documentTitle: string;
   signUrl: string;
   message?: string;
+  branding?: EmailBranding;
 }
 
 export async function sendSignerInviteEmail({
@@ -135,7 +149,9 @@ export async function sendSignerInviteEmail({
   documentTitle,
   signUrl,
   message,
+  branding,
 }: SignerInviteEmailProps): Promise<boolean> {
+  const buttonColor = branding?.primaryColor || "#3b82f6";
   const content = `
     <h2 style="margin: 0 0 16px 0; font-size: 20px; color: #111827;">
       You've been requested to sign a document
@@ -152,7 +168,7 @@ export async function sendSignerInviteEmail({
       </p>
     </div>
     ${message ? `
-      <div style="border-left: 3px solid #3b82f6; padding-left: 16px; margin: 16px 0;">
+      <div style="border-left: 3px solid ${buttonColor}; padding-left: 16px; margin: 16px 0;">
         <p style="margin: 0; font-size: 14px; color: #6b7280; font-style: italic;">
           "${message}"
         </p>
@@ -162,18 +178,18 @@ export async function sendSignerInviteEmail({
       Click the button below to review and sign the document:
     </p>
     <div style="text-align: center;">
-      ${emailButton("Review & Sign Document", signUrl)}
+      ${emailButton("Review & Sign Document", signUrl, buttonColor)}
     </div>
     <p style="margin: 24px 0 0 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
       Or copy and paste this link into your browser:<br>
-      <a href="${signUrl}" style="color: #3b82f6; word-break: break-all;">${signUrl}</a>
+      <a href="${signUrl}" style="color: ${buttonColor}; word-break: break-all;">${signUrl}</a>
     </p>
   `;
 
   return sendEmail({
     to: signerEmail,
     subject: `${senderName} requested your signature on "${documentTitle}"`,
-    html: emailTemplate(content),
+    html: emailTemplate(content, branding),
   });
 }
 

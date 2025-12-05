@@ -103,6 +103,7 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
   const [selectedFieldType, setSelectedFieldType] = useState<string>("signature");
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [autoRelease, setAutoRelease] = useState(true);
+  const [canResizeFields, setCanResizeFields] = useState(false);
 
   // PDF state
   const [numPages, setNumPages] = useState(0);
@@ -115,6 +116,25 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
   const router = useRouter();
   const { toast } = useToast();
   const { data: session, status } = useSession();
+
+  // Fetch plan limits for feature gating
+  useEffect(() => {
+    const fetchPlanLimits = async () => {
+      try {
+        const response = await fetch("/api/user/plan-limits");
+        if (response.ok) {
+          const data = await response.json();
+          setCanResizeFields(data.features?.resizeFields || data.isSuperAdmin || false);
+        }
+      } catch (error) {
+        console.error("Error fetching plan limits:", error);
+      }
+    };
+
+    if (session?.user) {
+      fetchPlanLimits();
+    }
+  }, [session]);
 
   useEffect(() => {
     const fetchDocument = async () => {
@@ -614,10 +634,10 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
                             // Convert back from scaled to unscaled coordinates
                             updateFieldPosition(id, x / scale, y / scale);
                           }}
-                          onResize={(id, w, h) => {
+                          onResize={canResizeFields ? (id, w, h) => {
                             // Convert back from scaled to unscaled size
                             updateFieldSize(id, w / scale, h / scale);
-                          }}
+                          } : undefined}
                           onDelete={removeField}
                           scale={1} // Scale is now applied to the field data directly
                         />

@@ -8,6 +8,8 @@ import { z } from "zod";
 const updateProfileSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   companyName: z.string().max(100).optional(),
+  brandingLogoUrl: z.string().url().max(500).optional().nullable(),
+  brandingPrimaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional().nullable(),
 });
 
 export async function GET() {
@@ -26,6 +28,8 @@ export async function GET() {
         image: users.image,
         plan: users.plan,
         companyName: users.companyName,
+        brandingLogoUrl: users.brandingLogoUrl,
+        brandingPrimaryColor: users.brandingPrimaryColor,
         createdAt: users.createdAt,
       })
       .from(users)
@@ -64,12 +68,19 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const { name, companyName } = parsed.data;
+    const { name, companyName, brandingLogoUrl, brandingPrimaryColor } = parsed.data;
 
     // Build update object with only provided fields
-    const updateData: { name?: string; companyName?: string } = {};
+    const updateData: {
+      name?: string;
+      companyName?: string;
+      brandingLogoUrl?: string | null;
+      brandingPrimaryColor?: string | null;
+    } = {};
     if (name !== undefined) updateData.name = name;
     if (companyName !== undefined) updateData.companyName = companyName;
+    if (brandingLogoUrl !== undefined) updateData.brandingLogoUrl = brandingLogoUrl;
+    if (brandingPrimaryColor !== undefined) updateData.brandingPrimaryColor = brandingPrimaryColor;
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json(

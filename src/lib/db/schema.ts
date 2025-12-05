@@ -23,6 +23,9 @@ export const users = pgTable("users", {
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
   isSuperAdmin: boolean("is_super_admin").default(false).notNull(),
+  // Custom branding (Starter+ plans)
+  brandingLogoUrl: text("branding_logo_url"),
+  brandingPrimaryColor: text("branding_primary_color"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -90,6 +93,21 @@ export const teamMembers = pgTable("team_members", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   role: text("role").default("member").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const teamInvitations = pgTable("team_invitations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  teamId: uuid("team_id")
+    .notNull()
+    .references(() => teams.id, { onDelete: "cascade" }),
+  email: text("email").notNull(),
+  invitedBy: uuid("invited_by")
+    .notNull()
+    .references(() => users.id),
+  token: uuid("token").defaultRandom().notNull(),
+  status: text("status").default("pending").notNull(), // pending, accepted, expired
+  expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
