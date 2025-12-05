@@ -7,6 +7,7 @@ import type { Plan } from "@/types";
 export interface PlanLimits {
   plan: Plan;
   planConfig: PlanConfig;
+  isSuperAdmin: boolean;
   templates: {
     used: number;
     limit: number;
@@ -41,8 +42,10 @@ export async function getUserPlanLimits(userId: string): Promise<PlanLimits> {
     throw new Error("User not found");
   }
 
-  const plan = (user.plan || "free") as Plan;
-  const planConfig = plansConfig[plan];
+  const isSuperAdmin = user.isSuperAdmin ?? false;
+  // Super admins get team plan features for free
+  const effectivePlan = isSuperAdmin ? "team" : (user.plan || "free") as Plan;
+  const planConfig = plansConfig[effectivePlan];
 
   // Count user's templates
   const userTemplates = await db
@@ -54,8 +57,9 @@ export async function getUserPlanLimits(userId: string): Promise<PlanLimits> {
   const templateLimit = planConfig.limits.templates;
 
   return {
-    plan,
+    plan: effectivePlan,
     planConfig,
+    isSuperAdmin,
     templates: {
       used: templateCount,
       limit: templateLimit,
@@ -77,6 +81,16 @@ export async function getUserPlanLimits(userId: string): Promise<PlanLimits> {
       unlimited: planConfig.limits.retentionDays === -1,
     },
   };
+}
+
+export async function isSuperAdmin(userId: string): Promise<boolean> {
+  const [user] = await db
+    .select({ isSuperAdmin: users.isSuperAdmin })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  return user?.isSuperAdmin ?? false;
 }
 
 export async function canUseFeature(

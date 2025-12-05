@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -11,6 +12,7 @@ import {
   Settings,
   CreditCard,
   Users,
+  Shield,
 } from "lucide-react";
 
 const navigation = [
@@ -56,6 +58,21 @@ const secondaryNavigation = [
 
 export function DashboardSidebar() {
   const pathname = usePathname();
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+  useEffect(() => {
+    // Check if user is super admin
+    fetch("/api/user/plan-limits")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.isSuperAdmin) {
+          setIsSuperAdmin(true);
+        }
+      })
+      .catch(() => {
+        // Silently fail - user just won't see admin link
+      });
+  }, []);
 
   return (
     <aside className="hidden w-64 flex-col border-r bg-background lg:flex">
@@ -112,6 +129,21 @@ export function DashboardSidebar() {
               </Link>
             );
           })}
+          {/* Super Admin Link - only visible to super admins */}
+          {isSuperAdmin && (
+            <Link
+              href="/dashboard/admin"
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                pathname === "/dashboard/admin"
+                  ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                  : "text-purple-600 hover:bg-purple-50 hover:text-purple-700 dark:text-purple-400 dark:hover:bg-purple-900/20"
+              )}
+            >
+              <Shield className="h-5 w-5" />
+              Super Admin
+            </Link>
+          )}
         </nav>
       </div>
     </aside>
