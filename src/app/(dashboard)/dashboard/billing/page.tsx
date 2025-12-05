@@ -37,6 +37,7 @@ export default function BillingPage() {
   const [documentCount, setDocumentCount] = useState(0);
   const [templateCount, setTemplateCount] = useState(0);
   const [userPlan, setUserPlan] = useState<Plan>("free");
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isUpgrading, setIsUpgrading] = useState<string | null>(null);
   const [isManaging, setIsManaging] = useState(false);
 
@@ -74,18 +75,27 @@ export default function BillingPage() {
           setDocumentCount(data.count || 0);
         }
 
-        // Fetch user profile for plan
-        const profileResponse = await fetch("/api/user/profile");
-        if (profileResponse.ok) {
-          const profile = await profileResponse.json();
-          setUserPlan(profile.plan || "free");
-        }
+        // Fetch plan limits (includes effective plan for super admins)
+        const limitsResponse = await fetch("/api/user/plan-limits");
+        if (limitsResponse.ok) {
+          const limits = await limitsResponse.json();
+          setUserPlan(limits.plan || "free");
+          setIsSuperAdmin(limits.isSuperAdmin || false);
+          setTemplateCount(limits.templates?.used || 0);
+        } else {
+          // Fallback to profile API
+          const profileResponse = await fetch("/api/user/profile");
+          if (profileResponse.ok) {
+            const profile = await profileResponse.json();
+            setUserPlan(profile.plan || "free");
+          }
 
-        // Fetch template count
-        const templatesResponse = await fetch("/api/templates");
-        if (templatesResponse.ok) {
-          const templates = await templatesResponse.json();
-          setTemplateCount(Array.isArray(templates) ? templates.length : 0);
+          // Fetch template count
+          const templatesResponse = await fetch("/api/templates");
+          if (templatesResponse.ok) {
+            const templates = await templatesResponse.json();
+            setTemplateCount(Array.isArray(templates) ? templates.length : 0);
+          }
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -184,6 +194,25 @@ export default function BillingPage() {
         </p>
       </div>
 
+      {/* Super Admin Notice */}
+      {isSuperAdmin && (
+        <Card className="border-purple-200 bg-purple-50 dark:border-purple-900 dark:bg-purple-950/30">
+          <CardContent className="flex items-center gap-3 py-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-600">
+              <Sparkles className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <p className="font-medium text-purple-900 dark:text-purple-100">
+                Super Admin Account
+              </p>
+              <p className="text-sm text-purple-700 dark:text-purple-300">
+                You have full Team plan access at no cost.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Current Plan */}
       <Card>
         <CardHeader>
@@ -191,14 +220,16 @@ export default function BillingPage() {
             <div>
               <CardTitle>Current Plan</CardTitle>
               <CardDescription>
-                You are currently on the {currentPlanConfig.name}
+                {isSuperAdmin
+                  ? "You have complimentary Team plan access"
+                  : `You are currently on the ${currentPlanConfig.name}`}
               </CardDescription>
             </div>
             <Badge
               variant={currentPlan === "free" ? "secondary" : "default"}
-              className="text-base px-4 py-1"
+              className={`text-base px-4 py-1 ${isSuperAdmin ? "bg-purple-600 hover:bg-purple-700" : ""}`}
             >
-              {currentPlanConfig.name}
+              {isSuperAdmin ? "Team (Admin)" : currentPlanConfig.name}
             </Badge>
           </div>
         </CardHeader>
@@ -219,16 +250,20 @@ export default function BillingPage() {
                 <span className="font-medium">Billing Cycle</span>
               </div>
               <p className="text-3xl font-bold">
-                ${currentPlanConfig.price}
+                ${isSuperAdmin ? "0" : currentPlanConfig.price}
                 <span className="text-base font-normal text-muted-foreground">
                   /month
                 </span>
               </p>
-              {currentPlan !== "free" && (
+              {isSuperAdmin ? (
+                <p className="text-sm text-purple-600">
+                  Complimentary admin access
+                </p>
+              ) : currentPlan !== "free" ? (
                 <p className="text-sm text-muted-foreground">
                   Billed monthly
                 </p>
-              )}
+              ) : null}
             </div>
           </div>
 

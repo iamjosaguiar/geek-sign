@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
@@ -23,6 +23,7 @@ import {
   CreditCard,
   LogOut,
   User,
+  Shield,
 } from "lucide-react";
 
 interface UserProfile {
@@ -45,7 +46,26 @@ interface DashboardHeaderProps {
 
 export function DashboardHeader({ user, profile }: DashboardHeaderProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [effectivePlan, setEffectivePlan] = useState<string>(profile?.plan || "free");
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    // Fetch effective plan from plan-limits API (handles super admin status)
+    fetch("/api/user/plan-limits")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.plan) {
+          setEffectivePlan(data.plan);
+        }
+        if (data.isSuperAdmin) {
+          setIsSuperAdmin(true);
+        }
+      })
+      .catch(() => {
+        // Fall back to profile plan
+      });
+  }, []);
 
   const handleSignOut = async () => {
     setIsLoading(true);
@@ -63,7 +83,6 @@ export function DashboardHeader({ user, profile }: DashboardHeaderProps) {
   };
 
   const displayName = profile?.name || user.name || user.email || "User";
-  const planName = profile?.plan || "free";
 
   return (
     <header className="flex h-16 items-center justify-between border-b bg-background px-6">
@@ -84,8 +103,8 @@ export function DashboardHeader({ user, profile }: DashboardHeaderProps) {
           Invite Teammate
         </Button>
 
-        {/* Upgrade Button (only show for free plan) */}
-        {planName === "free" && (
+        {/* Upgrade Button (only show for free plan, not super admins) */}
+        {effectivePlan === "free" && !isSuperAdmin && (
           <Button size="sm" asChild>
             <Link href="/dashboard/billing">
               <Sparkles className="mr-2 h-4 w-4" />
@@ -95,12 +114,19 @@ export function DashboardHeader({ user, profile }: DashboardHeaderProps) {
         )}
 
         {/* Plan Badge */}
-        <Badge
-          variant={planName === "free" ? "secondary" : "default"}
-          className="hidden md:inline-flex capitalize"
-        >
-          {planName}
-        </Badge>
+        {isSuperAdmin ? (
+          <Badge className="hidden md:inline-flex bg-purple-600 hover:bg-purple-700">
+            <Shield className="mr-1 h-3 w-3" />
+            Admin
+          </Badge>
+        ) : (
+          <Badge
+            variant={effectivePlan === "free" ? "secondary" : "default"}
+            className="hidden md:inline-flex capitalize"
+          >
+            {effectivePlan}
+          </Badge>
+        )}
 
         {/* User Menu */}
         <DropdownMenu>
