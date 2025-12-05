@@ -1,8 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { z } from "zod";
+
+const updateProfileSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  companyName: z.string().max(100).optional(),
+});
 
 export async function GET() {
   try {
@@ -33,6 +39,53 @@ export async function GET() {
     return NextResponse.json(user);
   } catch (error) {
     console.error("Error fetching user profile:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const parsed = updateProfileSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid input", details: parsed.error.flatten() },
+        { status: 400 }
+      );
+    }
+
+    const { name, companyName } = parsed.data;
+
+    // Build update object with only provided fields
+    const updateData: { name?: string; companyName?: string } = {};
+    if (name !== undefined) updateData.name = name;
+    if (companyName !== undefined) updateData.companyName = companyName;
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { error: "No fields to update" },
+        { status: 400 }
+      );
+    }
+
+    await db
+      .update(users)
+      .set(updateData)
+      .where(eq(users.id, session.user.id));
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error updating user profile:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
