@@ -94,9 +94,9 @@ export default async function DocumentPage({ params }: DocumentPageProps) {
       case "draft":
         return <Badge variant="secondary" className="text-base px-3 py-1">Draft</Badge>;
       case "pending":
-        return <Badge variant="outline" className="border-amber-500 text-amber-600 text-base px-3 py-1">Pending</Badge>;
+        return <Badge variant="outline" className="border-[#F15C3E] text-[#F15C3E] text-base px-3 py-1">Pending</Badge>;
       case "completed":
-        return <Badge variant="default" className="bg-green-600 text-base px-3 py-1">Completed</Badge>;
+        return <Badge variant="default" className="bg-[#07AFBA] hover:bg-[#07AFBA]/90 text-base px-3 py-1">Completed</Badge>;
       case "expired":
         return <Badge variant="destructive" className="text-base px-3 py-1">Expired</Badge>;
       default:
@@ -107,11 +107,11 @@ export default async function DocumentPage({ params }: DocumentPageProps) {
   const getRecipientStatusIcon = (status: string) => {
     switch (status) {
       case "signed":
-        return <CheckCircle2 className="h-4 w-4 text-green-600" />;
+        return <CheckCircle2 className="h-4 w-4 text-[#07AFBA]" />;
       case "declined":
         return <XCircle className="h-4 w-4 text-destructive" />;
       default:
-        return <Clock className="h-4 w-4 text-amber-600" />;
+        return <Clock className="h-4 w-4 text-[#F15C3E]" />;
     }
   };
 

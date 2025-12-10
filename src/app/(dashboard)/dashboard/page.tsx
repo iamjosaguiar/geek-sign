@@ -51,22 +51,22 @@ export default async function DashboardPage() {
       name: "Total Documents",
       value: totalResult?.count || 0,
       icon: FileText,
-      color: "text-blue-600",
-      bgColor: "bg-blue-100",
+      color: "text-[#252A61]",
+      bgColor: "bg-[#252A61]/10",
     },
     {
       name: "Pending",
       value: pendingResult?.count || 0,
       icon: Clock,
-      color: "text-amber-600",
-      bgColor: "bg-amber-100",
+      color: "text-[#F15C3E]",
+      bgColor: "bg-[#F15C3E]/10",
     },
     {
       name: "Completed",
       value: completedResult?.count || 0,
       icon: CheckCircle2,
-      color: "text-green-600",
-      bgColor: "bg-green-100",
+      color: "text-[#07AFBA]",
+      bgColor: "bg-[#07AFBA]/10",
     },
   ];
 
@@ -75,9 +75,9 @@ export default async function DashboardPage() {
       case "draft":
         return <Badge variant="secondary">Draft</Badge>;
       case "pending":
-        return <Badge variant="outline" className="border-amber-500 text-amber-600">Pending</Badge>;
+        return <Badge variant="outline" className="border-[#F15C3E] text-[#F15C3E]">Pending</Badge>;
       case "completed":
-        return <Badge variant="default" className="bg-green-600">Completed</Badge>;
+        return <Badge variant="default" className="bg-[#07AFBA] hover:bg-[#07AFBA]/90">Completed</Badge>;
       case "expired":
         return <Badge variant="destructive">Expired</Badge>;
       default:

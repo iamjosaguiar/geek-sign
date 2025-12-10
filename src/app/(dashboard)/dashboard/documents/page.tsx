@@ -83,9 +83,9 @@ export default async function DocumentsPage() {
       case "draft":
         return <Badge variant="secondary">Draft</Badge>;
       case "pending":
-        return <Badge variant="outline" className="border-amber-500 text-amber-600">Pending</Badge>;
+        return <Badge variant="outline" className="border-[#F15C3E] text-[#F15C3E]">Pending</Badge>;
       case "completed":
-        return <Badge variant="default" className="bg-green-600">Completed</Badge>;
+        return <Badge variant="default" className="bg-[#07AFBA] hover:bg-[#07AFBA]/90">Completed</Badge>;
       case "expired":
         return <Badge variant="destructive">Expired</Badge>;
       default:
@@ -103,10 +103,10 @@ export default async function DocumentsPage() {
     <div className="space-y-8">
       {/* Retention Warning for Free Users */}
       {showRetentionWarning && (
-        <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/50">
-          <Clock className="h-4 w-4 text-amber-600" />
+        <Alert className="border-[#F15C3E]/30 bg-[#F15C3E]/5 dark:border-[#F15C3E]/50 dark:bg-[#F15C3E]/10">
+          <Clock className="h-4 w-4 text-[#F15C3E]" />
           <AlertDescription className="flex items-center justify-between">
-            <span className="text-amber-800 dark:text-amber-200">
+            <span className="text-[#252A61] dark:text-[#F15C3E]/90">
               Documents on the Free plan are automatically deleted after {retentionDays} days.
             </span>
             <Button variant="outline" size="sm" asChild className="ml-4 shrink-0">
