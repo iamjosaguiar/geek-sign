@@ -19,15 +19,15 @@ const config: Config = {
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
+        ring: "var(--brand-teal)",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "hsl(var(--primary))",
+          DEFAULT: "var(--brand-teal)",
           foreground: "hsl(var(--primary-foreground))",
         },
         secondary: {
-          DEFAULT: "hsl(var(--secondary))",
+          DEFAULT: "var(--brand-navy)",
           foreground: "hsl(var(--secondary-foreground))",
         },
         destructive: {
@@ -39,7 +39,7 @@ const config: Config = {
           foreground: "hsl(var(--muted-foreground))",
         },
         accent: {
-          DEFAULT: "hsl(var(--accent))",
+          DEFAULT: "var(--brand-orange)",
           foreground: "hsl(var(--accent-foreground))",
         },
         popover: {
@@ -49,6 +49,12 @@ const config: Config = {
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
+        },
+        // Brand colors with exact hex values
+        brand: {
+          teal: "var(--brand-teal)",
+          navy: "var(--brand-navy)",
+          orange: "var(--brand-orange)",
         },
       },
       borderRadius: {
