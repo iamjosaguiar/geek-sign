@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,6 +64,7 @@ interface PendingInvitation {
 
 export default function TeamPage() {
   const { data: session, status } = useSession();
+  const searchParams = useSearchParams();
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -72,6 +74,13 @@ export default function TeamPage() {
   const [userPlan, setUserPlan] = useState("free");
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const { toast } = useToast();
+
+  // Open invite dialog if ?invite=true is in URL
+  useEffect(() => {
+    if (searchParams.get("invite") === "true" && !isLoading) {
+      setShowInviteDialog(true);
+    }
+  }, [searchParams, isLoading]);
 
   useEffect(() => {
     const fetchData = async () => {

@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 220 20% 97%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
@@ -23,15 +23,23 @@
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 217.2 91.2% 59.8%;
-    --radius: 0.5rem;
+    --radius: 0.75rem;
+
+    /* Glassmorphism variables */
+    --glass-blur: 16px;
+    --glass-bg: 255 255 255;
+    --glass-bg-opacity: 0.7;
+    --glass-border: 255 255 255;
+    --glass-border-opacity: 0.3;
+    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    --background: 222.2 47% 8%;
     --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
+    --card: 222.2 47% 11%;
     --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
+    --popover: 222.2 47% 11%;
     --popover-foreground: 210 40% 98%;
     --primary: 217.2 91.2% 59.8%;
     --primary-foreground: 222.2 47.4% 11.2%;
@@ -43,9 +51,80 @@
     --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
+    --border: 217.2 32.6% 25%;
     --input: 217.2 32.6% 17.5%;
     --ring: 224.3 76.3% 48%;
+
+    /* Dark mode glassmorphism variables */
+    --glass-bg: 30 41 59;
+    --glass-bg-opacity: 0.6;
+    --glass-border: 148 163 184;
+    --glass-border-opacity: 0.2;
+    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Glassmorphism utility classes */
+@layer components {
+  .glass {
+    background: rgba(var(--glass-bg), var(--glass-bg-opacity));
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid rgba(var(--glass-border), var(--glass-border-opacity));
+    box-shadow: var(--glass-shadow);
+  }
+
+  .glass-light {
+    background: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+  }
+
+  .glass-strong {
+    background: rgba(var(--glass-bg), 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(var(--glass-border), 0.4);
+    box-shadow: var(--glass-shadow);
+  }
+
+  .glass-subtle {
+    background: rgba(var(--glass-bg), 0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(var(--glass-border), 0.15);
+  }
+}
+
+/* Gradient backgrounds for glassmorphism effect */
+@layer utilities {
+  .bg-gradient-glass {
+    background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.1) 0%,
+      rgba(255, 255, 255, 0.05) 100%);
+  }
+
+  .bg-mesh-gradient {
+    background:
+      radial-gradient(at 40% 20%, hsla(217, 91%, 60%, 0.15) 0px, transparent 50%),
+      radial-gradient(at 80% 0%, hsla(189, 100%, 56%, 0.1) 0px, transparent 50%),
+      radial-gradient(at 0% 50%, hsla(355, 100%, 65%, 0.08) 0px, transparent 50%),
+      radial-gradient(at 80% 50%, hsla(217, 91%, 75%, 0.1) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, hsla(280, 100%, 70%, 0.08) 0px, transparent 50%),
+      radial-gradient(at 80% 100%, hsla(217, 91%, 60%, 0.1) 0px, transparent 50%),
+      radial-gradient(at 0% 0%, hsla(217, 91%, 60%, 0.1) 0px, transparent 50%);
+  }
+
+  .dark .bg-mesh-gradient {
+    background:
+      radial-gradient(at 40% 20%, hsla(217, 91%, 40%, 0.2) 0px, transparent 50%),
+      radial-gradient(at 80% 0%, hsla(189, 100%, 36%, 0.15) 0px, transparent 50%),
+      radial-gradient(at 0% 50%, hsla(355, 100%, 45%, 0.1) 0px, transparent 50%),
+      radial-gradient(at 80% 50%, hsla(217, 91%, 55%, 0.15) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, hsla(280, 100%, 50%, 0.1) 0px, transparent 50%),
+      radial-gradient(at 80% 100%, hsla(217, 91%, 40%, 0.15) 0px, transparent 50%),
+      radial-gradient(at 0% 0%, hsla(217, 91%, 40%, 0.15) 0px, transparent 50%);
   }
 }
 

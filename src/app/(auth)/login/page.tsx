@@ -16,7 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 
 function LoginForm() {
   const [email, setEmail] = useState("");
@@ -77,6 +77,13 @@ function LoginForm() {
   return (
     <Card className="border-0 shadow-none lg:border lg:shadow-sm">
       <CardHeader className="space-y-1">
+        <Link
+          href="/"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors mb-2"
+        >
+          <ArrowLeft className="mr-1 h-4 w-4" />
+          Back to homepage
+        </Link>
         <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
         <CardDescription>
           Enter your email and password to sign in to your account

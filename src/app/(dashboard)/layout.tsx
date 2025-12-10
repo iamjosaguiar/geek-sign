@@ -33,7 +33,7 @@ export default async function DashboardLayout({
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-muted/30">
+    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-100 via-blue-50/50 to-purple-50/30 bg-mesh-gradient dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <DashboardSidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <DashboardHeader user={user} profile={profile} />

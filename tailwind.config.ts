@@ -55,9 +55,20 @@ const config: Config = {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        xl: "calc(var(--radius) + 4px)",
+        "2xl": "calc(var(--radius) + 8px)",
       },
       fontFamily: {
         sans: ["var(--font-inter)"],
+      },
+      backdropBlur: {
+        xs: "2px",
+      },
+      boxShadow: {
+        glass: "0 8px 32px 0 rgba(31, 38, 135, 0.15)",
+        "glass-sm": "0 4px 16px 0 rgba(31, 38, 135, 0.1)",
+        "glass-lg": "0 12px 48px 0 rgba(31, 38, 135, 0.2)",
+        "glass-inset": "inset 0 1px 1px 0 rgba(255, 255, 255, 0.15)",
       },
       keyframes: {
         "accordion-down": {
@@ -68,10 +79,20 @@ const config: Config = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        shimmer: {
+          "0%": { backgroundPosition: "-200% 0" },
+          "100%": { backgroundPosition: "200% 0" },
+        },
+        "glow-pulse": {
+          "0%, 100%": { opacity: "0.4" },
+          "50%": { opacity: "0.8" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        shimmer: "shimmer 2s linear infinite",
+        "glow-pulse": "glow-pulse 2s ease-in-out infinite",
       },
     },
   },

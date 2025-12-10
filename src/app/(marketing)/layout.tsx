@@ -7,12 +7,12 @@ export default function MarketingLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col bg-mesh-gradient">
       {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-50 w-full border-b border-white/20 bg-white/70 backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/70">
         <div className="container flex h-16 items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary shadow-glass-sm">
               <span className="text-sm font-bold text-primary-foreground">G</span>
             </div>
             <span className="text-lg font-semibold">Geek Sign</span>
@@ -21,19 +21,19 @@ export default function MarketingLayout({
           <nav className="hidden md:flex items-center gap-6">
             <Link
               href="/#features"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-all hover:scale-105"
             >
               Features
             </Link>
             <Link
               href="/pricing"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-all hover:scale-105"
             >
               Pricing
             </Link>
             <Link
               href="/#faq"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-all hover:scale-105"
             >
               FAQ
             </Link>
@@ -54,12 +54,12 @@ export default function MarketingLayout({
       <main className="flex-1">{children}</main>
 
       {/* Footer */}
-      <footer className="border-t bg-muted/30">
+      <footer className="border-t border-white/20 bg-white/50 backdrop-blur-lg dark:border-white/10 dark:bg-slate-900/50">
         <div className="container py-12">
           <div className="grid gap-8 md:grid-cols-4">
             <div className="space-y-4">
               <Link href="/" className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary shadow-glass-sm">
                   <span className="text-sm font-bold text-primary-foreground">G</span>
                 </div>
                 <span className="text-lg font-semibold">Geek Sign</span>
@@ -128,7 +128,7 @@ export default function MarketingLayout({
             </div>
           </div>
 
-          <div className="mt-8 pt-8 border-t flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="mt-8 pt-8 border-t border-white/20 flex flex-col md:flex-row justify-between items-center gap-4 dark:border-white/10">
             <p className="text-sm text-muted-foreground">
               © {new Date().getFullYear()} House of Geeks. All rights reserved.
             </p>

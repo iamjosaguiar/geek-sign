@@ -85,7 +85,7 @@ export function DashboardHeader({ user, profile }: DashboardHeaderProps) {
   const displayName = profile?.name || user.name || user.email || "User";
 
   return (
-    <header className="flex h-16 items-center justify-between border-b bg-background px-6">
+    <header className="flex h-16 items-center justify-between border-b border-white/20 bg-white/60 px-6 backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/60">
       {/* Mobile menu button */}
       <Button variant="ghost" size="icon" className="lg:hidden">
         <Menu className="h-5 w-5" />
@@ -98,9 +98,11 @@ export function DashboardHeader({ user, profile }: DashboardHeaderProps) {
       {/* Right side actions */}
       <div className="flex items-center gap-3">
         {/* Invite Teammate */}
-        <Button variant="outline" size="sm" className="hidden sm:flex">
-          <UserPlus className="mr-2 h-4 w-4" />
-          Invite Teammate
+        <Button variant="outline" size="sm" className="hidden sm:flex" asChild>
+          <Link href="/dashboard/team?invite=true">
+            <UserPlus className="mr-2 h-4 w-4" />
+            Invite Teammate
+          </Link>
         </Button>
 
         {/* Upgrade Button (only show for free plan, not super admins) */}
@@ -115,14 +117,14 @@ export function DashboardHeader({ user, profile }: DashboardHeaderProps) {
 
         {/* Plan Badge */}
         {isSuperAdmin ? (
-          <Badge className="hidden md:inline-flex bg-purple-600 hover:bg-purple-700">
+          <Badge className="hidden md:inline-flex bg-purple-600 hover:bg-purple-700 shadow-glass-sm">
             <Shield className="mr-1 h-3 w-3" />
             Admin
           </Badge>
         ) : (
           <Badge
             variant={effectivePlan === "free" ? "secondary" : "default"}
-            className="hidden md:inline-flex capitalize"
+            className="hidden md:inline-flex capitalize shadow-glass-sm"
           >
             {effectivePlan}
           </Badge>
@@ -131,13 +133,13 @@ export function DashboardHeader({ user, profile }: DashboardHeaderProps) {
         {/* User Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+            <Button variant="ghost" className="relative h-9 w-9 rounded-full ring-2 ring-white/20 transition-all hover:ring-white/40 dark:ring-white/10 dark:hover:ring-white/20">
               <Avatar className="h-9 w-9">
                 <AvatarImage
                   src={profile?.image || user.image || undefined}
                   alt={displayName}
                 />
-                <AvatarFallback>{getInitials(profile?.name || user.name)}</AvatarFallback>
+                <AvatarFallback className="bg-primary/10 text-primary">{getInitials(profile?.name || user.name)}</AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
@@ -150,7 +152,7 @@ export function DashboardHeader({ user, profile }: DashboardHeaderProps) {
                 </p>
               </div>
             </DropdownMenuLabel>
-            <DropdownMenuSeparator />
+            <DropdownMenuSeparator className="bg-white/20 dark:bg-white/10" />
             <DropdownMenuItem asChild>
               <Link href="/dashboard/settings">
                 <User className="mr-2 h-4 w-4" />
@@ -169,11 +171,11 @@ export function DashboardHeader({ user, profile }: DashboardHeaderProps) {
                 Settings
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
+            <DropdownMenuSeparator className="bg-white/20 dark:bg-white/10" />
             <DropdownMenuItem
               onClick={handleSignOut}
               disabled={isLoading}
-              className="text-destructive focus:text-destructive"
+              className="text-destructive focus:text-destructive focus:bg-destructive/10"
             >
               <LogOut className="mr-2 h-4 w-4" />
               {isLoading ? "Signing out..." : "Sign out"}

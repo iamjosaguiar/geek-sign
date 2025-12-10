@@ -75,11 +75,11 @@ export function DashboardSidebar() {
   }, []);
 
   return (
-    <aside className="hidden w-64 flex-col border-r bg-background lg:flex">
+    <aside className="hidden w-64 flex-col border-r border-white/20 bg-white/60 backdrop-blur-xl lg:flex dark:border-white/10 dark:bg-slate-900/60">
       {/* Logo */}
-      <div className="flex h-16 items-center border-b px-6">
+      <div className="flex h-16 items-center border-b border-white/20 px-6 dark:border-white/10">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary shadow-glass-sm">
             <span className="text-sm font-bold text-primary-foreground">G</span>
           </div>
           <span className="text-lg font-semibold">Geek Sign</span>
@@ -95,10 +95,10 @@ export function DashboardSidebar() {
               key={item.name}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
                 isActive
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  ? "bg-primary/15 text-primary shadow-glass-sm backdrop-blur-sm"
+                  : "text-muted-foreground hover:bg-white/50 hover:text-foreground dark:hover:bg-white/10"
               )}
             >
               <item.icon className="h-5 w-5" />
@@ -109,7 +109,7 @@ export function DashboardSidebar() {
       </nav>
 
       {/* Secondary Navigation */}
-      <div className="border-t px-3 py-4">
+      <div className="border-t border-white/20 px-3 py-4 dark:border-white/10">
         <nav className="space-y-1">
           {secondaryNavigation.map((item) => {
             const isActive = pathname === item.href;
@@ -118,10 +118,10 @@ export function DashboardSidebar() {
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
                   isActive
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    ? "bg-primary/15 text-primary shadow-glass-sm backdrop-blur-sm"
+                    : "text-muted-foreground hover:bg-white/50 hover:text-foreground dark:hover:bg-white/10"
                 )}
               >
                 <item.icon className="h-5 w-5" />
@@ -134,10 +134,10 @@ export function DashboardSidebar() {
             <Link
               href="/dashboard/admin"
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
                 pathname === "/dashboard/admin"
-                  ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                  : "text-purple-600 hover:bg-purple-50 hover:text-purple-700 dark:text-purple-400 dark:hover:bg-purple-900/20"
+                  ? "bg-purple-500/15 text-purple-700 shadow-glass-sm backdrop-blur-sm dark:text-purple-400"
+                  : "text-purple-600 hover:bg-purple-500/10 hover:text-purple-700 dark:text-purple-400 dark:hover:bg-purple-500/10"
               )}
             >
               <Shield className="h-5 w-5" />
