@@ -9,29 +9,30 @@
     --brand-navy: #252A61;
     --brand-orange: #F15C3E;
 
-    --background: 220 20% 97%;
-    --foreground: 235 45% 26%;
+    /* Light theme - warm off-white with crisp contrasts */
+    --background: 40 33% 98%;
+    --foreground: 235 45% 16%;
     --card: 0 0% 100%;
-    --card-foreground: 235 45% 26%;
+    --card-foreground: 235 45% 16%;
     --popover: 0 0% 100%;
-    --popover-foreground: 235 45% 26%;
+    --popover-foreground: 235 45% 16%;
     /* Primary: Teal #07AFBA */
     --primary: 184 93% 38%;
     --primary-foreground: 0 0% 100%;
     /* Secondary: Navy #252A61 */
     --secondary: 235 45% 26%;
     --secondary-foreground: 0 0% 100%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 235 25% 46%;
+    --muted: 40 20% 94%;
+    --muted-foreground: 235 20% 40%;
     /* Accent: Orange #F15C3E */
     --accent: 10 86% 59%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
+    --border: 40 20% 90%;
+    --input: 40 20% 90%;
     --ring: 184 93% 38%;
-    --radius: 0.75rem;
+    --radius: 0.625rem;
 
     /* Glassmorphism variables */
     --glass-blur: 16px;
@@ -39,7 +40,7 @@
     --glass-bg-opacity: 0.7;
     --glass-border: 255 255 255;
     --glass-border-opacity: 0.3;
-    --glass-shadow: 0 8px 32px 0 rgba(37, 42, 97, 0.15);
+    --glass-shadow: 0 8px 32px 0 rgba(37, 42, 97, 0.08);
   }
 
   .dark {
@@ -108,7 +109,7 @@
   }
 }
 
-/* Gradient backgrounds for glassmorphism effect */
+/* Gradient backgrounds and design utilities */
 @layer utilities {
   .bg-gradient-glass {
     background: linear-gradient(135deg,
@@ -127,6 +128,72 @@
       radial-gradient(at 30% 20%, rgba(7, 175, 186, 0.08) 0px, transparent 50%),
       radial-gradient(at 80% 80%, rgba(37, 42, 97, 0.06) 0px, transparent 50%);
   }
+
+  /* Dot grid pattern background */
+  .bg-dot-pattern {
+    background-image: radial-gradient(circle, rgba(37, 42, 97, 0.08) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  /* Subtle warm gradient for hero */
+  .bg-warm-gradient {
+    background: linear-gradient(180deg,
+      hsl(40, 33%, 98%) 0%,
+      hsl(40, 25%, 96%) 50%,
+      hsl(40, 33%, 98%) 100%);
+  }
+
+  /* Teal accent line */
+  .accent-line-teal {
+    position: relative;
+  }
+  .accent-line-teal::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--brand-teal);
+    border-radius: 3px;
+  }
+
+  /* Editorial heading style */
+  .heading-editorial {
+    font-family: var(--font-instrument-serif), Georgia, serif;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+
+  /* Subtle shadow with teal tint */
+  .shadow-teal {
+    box-shadow: 0 4px 24px -4px rgba(7, 175, 186, 0.15),
+                0 2px 8px -2px rgba(37, 42, 97, 0.08);
+  }
+
+  .shadow-teal-lg {
+    box-shadow: 0 8px 40px -8px rgba(7, 175, 186, 0.2),
+                0 4px 16px -4px rgba(37, 42, 97, 0.1);
+  }
+
+  /* Card hover lift effect */
+  .hover-lift {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px -8px rgba(7, 175, 186, 0.2),
+                0 6px 20px -4px rgba(37, 42, 97, 0.1);
+  }
+
+  /* Stagger animation delays */
+  .stagger-1 { animation-delay: 0.1s; }
+  .stagger-2 { animation-delay: 0.2s; }
+  .stagger-3 { animation-delay: 0.3s; }
+  .stagger-4 { animation-delay: 0.4s; }
+  .stagger-5 { animation-delay: 0.5s; }
+  .stagger-6 { animation-delay: 0.6s; }
 }
 
 @layer base {

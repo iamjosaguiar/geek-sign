@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Accordion,
   AccordionContent,
@@ -21,6 +20,8 @@ import {
   CheckCircle2,
   ArrowRight,
   Star,
+  PenTool,
+  FileCheck,
 } from "lucide-react";
 
 const features = [
@@ -28,53 +29,63 @@ const features = [
     icon: Upload,
     title: "Easy Upload",
     description: "Upload PDFs in seconds. Drag and drop or browse to select your documents.",
+    size: "normal" as const,
   },
   {
     icon: FileSignature,
     title: "Drag & Drop Fields",
     description: "Place signature, initial, date, and text fields exactly where you need them.",
+    size: "normal" as const,
   },
   {
     icon: Send,
     title: "Send & Track",
     description: "Send documents to multiple recipients and track signing progress in real-time.",
+    size: "featured" as const,
   },
   {
     icon: Shield,
     title: "Legally Binding",
     description: "Compliant with ESIGN Act and UETA. Your signatures are legally enforceable.",
+    size: "normal" as const,
   },
   {
     icon: Clock,
     title: "Audit Trail",
     description: "Complete audit log with timestamps, IP addresses, and signing history.",
+    size: "normal" as const,
   },
   {
     icon: Users,
     title: "Team Collaboration",
     description: "Invite team members, share templates, and work together seamlessly.",
+    size: "normal" as const,
   },
 ];
 
 const howItWorks = [
   {
     step: 1,
-    title: "Upload Your Document",
+    title: "Upload",
+    fullTitle: "Upload Your Document",
     description: "Upload any PDF document you need signed. Our system handles files up to 50MB.",
   },
   {
     step: 2,
-    title: "Add Recipients & Fields",
+    title: "Add Fields",
+    fullTitle: "Add Recipients & Fields",
     description: "Specify who needs to sign and where. Drag and drop signature fields onto your document.",
   },
   {
     step: 3,
-    title: "Send for Signatures",
+    title: "Send",
+    fullTitle: "Send for Signatures",
     description: "Recipients receive an email with a secure link to sign. No account required for signers.",
   },
   {
     step: 4,
-    title: "Download Signed Document",
+    title: "Download",
+    fullTitle: "Download Signed Document",
     description: "Once everyone signs, download the completed document with full audit trail.",
   },
 ];
@@ -129,53 +140,132 @@ const faqs = [
 
 export default function HomePage() {
   return (
-    <div>
+    <div className="overflow-hidden">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-primary/5 via-background to-background">
-        <div className="container py-24 md:py-32">
-          <div className="mx-auto max-w-3xl text-center">
-            <Badge variant="secondary" className="mb-4">
-              Trusted by 10,000+ users
-            </Badge>
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-              Sign Documents Online,{" "}
-              <span className="text-primary">Fast & Secure</span>
-            </h1>
-            <p className="mt-6 text-lg text-muted-foreground md:text-xl">
-              The simplest way to get documents signed. Upload, add signature fields,
-              send to recipients, and track everything in real-time.
-            </p>
-            <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Button size="lg" asChild>
-                <Link href="/signup">
-                  Start Signing for Free
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button size="lg" variant="outline" asChild>
-                <Link href="/pricing">View Pricing</Link>
-              </Button>
-            </div>
-            <p className="mt-4 text-sm text-muted-foreground">
-              No credit card required. 3 free documents per month.
-            </p>
-          </div>
+      <section className="relative bg-warm-gradient">
+        {/* Dot pattern overlay */}
+        <div className="absolute inset-0 bg-dot-pattern opacity-40" />
 
-          {/* Dashboard Preview */}
-          <div className="mt-16 mx-auto max-w-5xl">
-            <div className="rounded-xl border bg-background shadow-2xl overflow-hidden">
-              <div className="border-b bg-muted/50 px-4 py-3 flex items-center gap-2">
-                <div className="flex gap-1.5">
-                  <div className="h-3 w-3 rounded-full bg-red-500" />
-                  <div className="h-3 w-3 rounded-full bg-yellow-500" />
-                  <div className="h-3 w-3 rounded-full bg-green-500" />
+        {/* Floating decorative elements */}
+        <div className="absolute top-20 left-[10%] opacity-20 animate-float-slow">
+          <FileText className="h-16 w-16 text-brand-navy" />
+        </div>
+        <div className="absolute top-40 right-[15%] opacity-15 animate-float" style={{ animationDelay: "1s" }}>
+          <PenTool className="h-12 w-12 text-brand-teal" />
+        </div>
+        <div className="absolute bottom-32 left-[20%] opacity-10 animate-float" style={{ animationDelay: "2s" }}>
+          <FileCheck className="h-10 w-10 text-brand-orange" />
+        </div>
+
+        <div className="container relative py-24 md:py-32 lg:py-40">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            {/* Left side - Content */}
+            <div className="max-w-xl">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 border border-brand-teal/20 shadow-sm mb-8 opacity-0 animate-fade-up">
+                <span className="flex h-2 w-2 rounded-full bg-brand-teal animate-pulse" />
+                <span className="text-sm font-medium text-brand-navy">Trusted by 10,000+ users</span>
+              </div>
+
+              <h1 className="heading-editorial text-5xl md:text-6xl lg:text-7xl text-brand-navy mb-6 opacity-0 animate-fade-up stagger-1">
+                Sign Documents{" "}
+                <span className="text-brand-teal italic">Online</span>
+              </h1>
+
+              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-10 opacity-0 animate-fade-up stagger-2">
+                The simplest way to get documents signed. Upload, add signature fields,
+                send to recipients, and track everything in real-time.
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-4 mb-6 opacity-0 animate-fade-up stagger-3">
+                <Button size="lg" className="text-base px-8 shadow-teal hover:shadow-teal-lg transition-shadow" asChild>
+                  <Link href="/signup">
+                    Start Signing Free
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button size="lg" variant="outline" className="text-base px-8 border-brand-navy/20 hover:bg-brand-navy/5" asChild>
+                  <Link href="/pricing">View Pricing</Link>
+                </Button>
+              </div>
+
+              <p className="text-sm text-muted-foreground opacity-0 animate-fade-up stagger-4">
+                No credit card required. 3 free documents per month.
+              </p>
+            </div>
+
+            {/* Right side - Dashboard Preview */}
+            <div className="relative opacity-0 animate-slide-in-right stagger-3">
+              {/* Background decoration */}
+              <div className="absolute -inset-4 bg-gradient-to-br from-brand-teal/10 via-transparent to-brand-navy/5 rounded-3xl" />
+
+              <div className="relative rounded-2xl border border-brand-navy/10 bg-white shadow-teal-lg overflow-hidden">
+                {/* Window chrome */}
+                <div className="border-b border-brand-navy/5 bg-gradient-to-r from-slate-50 to-white px-4 py-3 flex items-center gap-3">
+                  <div className="flex gap-1.5">
+                    <div className="h-3 w-3 rounded-full bg-red-400" />
+                    <div className="h-3 w-3 rounded-full bg-amber-400" />
+                    <div className="h-3 w-3 rounded-full bg-emerald-400" />
+                  </div>
+                  <div className="flex-1 flex justify-center">
+                    <div className="px-4 py-1 rounded-md bg-slate-100 text-xs text-muted-foreground">
+                      sign.houseofgeeks.online
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dashboard content preview */}
+                <div className="aspect-[4/3] bg-gradient-to-br from-slate-50 to-slate-100/50 p-6">
+                  <div className="h-full flex flex-col">
+                    {/* Mini header */}
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-2">
+                        <div className="h-8 w-8 rounded-lg bg-brand-teal flex items-center justify-center">
+                          <span className="text-xs font-bold text-white">G</span>
+                        </div>
+                        <div className="h-3 w-20 rounded bg-slate-200" />
+                      </div>
+                      <div className="flex gap-2">
+                        <div className="h-8 w-24 rounded-md bg-brand-teal/10 border border-brand-teal/20" />
+                      </div>
+                    </div>
+
+                    {/* Stats row */}
+                    <div className="grid grid-cols-3 gap-3 mb-6">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="p-3 rounded-lg bg-white shadow-sm border border-slate-100">
+                          <div className="h-2 w-8 rounded bg-slate-200 mb-2" />
+                          <div className="h-4 w-12 rounded bg-brand-teal/20" />
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Document list */}
+                    <div className="flex-1 rounded-lg bg-white shadow-sm border border-slate-100 p-4">
+                      <div className="h-3 w-24 rounded bg-slate-200 mb-4" />
+                      <div className="space-y-3">
+                        {[1, 2, 3].map((i) => (
+                          <div key={i} className="flex items-center gap-3 p-2 rounded-md bg-slate-50">
+                            <div className="h-8 w-8 rounded bg-brand-navy/10 flex items-center justify-center">
+                              <FileText className="h-4 w-4 text-brand-navy/40" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="h-2 w-32 rounded bg-slate-200 mb-1" />
+                              <div className="h-2 w-20 rounded bg-slate-100" />
+                            </div>
+                            <div className={`h-5 w-16 rounded-full ${i === 1 ? 'bg-emerald-100' : i === 2 ? 'bg-amber-100' : 'bg-slate-100'}`} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="aspect-[16/9] bg-muted flex items-center justify-center">
-                <div className="text-center text-muted-foreground">
-                  <FileText className="h-16 w-16 mx-auto mb-4" />
-                  <p className="text-lg font-medium">Dashboard Preview</p>
-                  <p className="text-sm">Your document management hub</p>
+
+              {/* Floating badge */}
+              <div className="absolute -bottom-4 -left-4 px-4 py-2 rounded-xl bg-white shadow-teal border border-brand-teal/20 animate-float" style={{ animationDelay: "0.5s" }}>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                  <span className="text-sm font-medium text-brand-navy">Document signed!</span>
                 </div>
               </div>
             </div>
@@ -184,58 +274,77 @@ export default function HomePage() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="container py-24">
-        <div className="mx-auto max-w-2xl text-center mb-16">
-          <Badge variant="secondary" className="mb-4">
+      <section id="features" className="container py-24 md:py-32">
+        <div className="max-w-2xl mx-auto text-center mb-16">
+          <span className="inline-block px-4 py-1.5 rounded-full bg-brand-teal/10 text-brand-teal text-sm font-medium mb-4">
             Features
-          </Badge>
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            Everything you need to get signatures
+          </span>
+          <h2 className="heading-editorial text-4xl md:text-5xl text-brand-navy mb-4">
+            Everything you need
           </h2>
-          <p className="mt-4 text-lg text-muted-foreground">
+          <p className="text-lg text-muted-foreground">
             Powerful features that make document signing effortless
           </p>
         </div>
 
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-          {features.map((feature) => (
-            <Card key={feature.title} className="border-0 shadow-none bg-muted/30">
-              <CardHeader>
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 mb-4">
-                  <feature.icon className="h-6 w-6 text-primary" />
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {features.map((feature, index) => (
+            <Card
+              key={feature.title}
+              className="group border border-slate-100 bg-white shadow-sm hover-lift cursor-default"
+            >
+              <CardContent className="p-6">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl mb-4 transition-colors bg-brand-teal/10 text-brand-teal group-hover:bg-brand-teal group-hover:text-white">
+                  <feature.icon className="h-6 w-6" />
                 </div>
-                <CardTitle>{feature.title}</CardTitle>
-                <CardDescription className="text-base">
+                <h3 className="text-xl font-semibold text-brand-navy mb-2">{feature.title}</h3>
+                <p className="text-muted-foreground leading-relaxed">
                   {feature.description}
-                </CardDescription>
-              </CardHeader>
+                </p>
+              </CardContent>
             </Card>
           ))}
         </div>
       </section>
 
       {/* How It Works Section */}
-      <section className="bg-muted/30 py-24">
-        <div className="container">
-          <div className="mx-auto max-w-2xl text-center mb-16">
-            <Badge variant="secondary" className="mb-4">
+      <section className="bg-gradient-to-b from-slate-50 to-white py-24 md:py-32 relative overflow-hidden">
+        {/* Decorative elements */}
+        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-brand-teal/20 to-transparent" />
+
+        <div className="container relative">
+          <div className="max-w-2xl mx-auto text-center mb-16">
+            <span className="inline-block px-4 py-1.5 rounded-full bg-brand-teal/10 text-brand-teal text-sm font-medium mb-4">
               How It Works
-            </Badge>
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              Get documents signed in 4 simple steps
+            </span>
+            <h2 className="heading-editorial text-4xl md:text-5xl text-brand-navy mb-4">
+              Four simple steps
             </h2>
           </div>
 
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-            {howItWorks.map((step) => (
-              <div key={step.step} className="relative">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground text-lg font-bold mb-4">
-                  {step.step}
+          {/* Timeline */}
+          <div className="relative max-w-5xl mx-auto">
+            {/* Connecting line - desktop */}
+            <div className="hidden lg:block absolute top-12 left-[12.5%] right-[12.5%] h-0.5 bg-gradient-to-r from-brand-teal/20 via-brand-teal/40 to-brand-teal/20" />
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-6">
+              {howItWorks.map((step, index) => (
+                <div key={step.step} className="relative group">
+                  {/* Step number */}
+                  <div className="relative z-10 flex h-24 w-24 mx-auto items-center justify-center rounded-full bg-white border-2 border-brand-teal/30 shadow-sm mb-6 group-hover:border-brand-teal group-hover:shadow-teal transition-all">
+                    <span className="text-3xl font-serif italic text-brand-teal">{step.step}</span>
+                  </div>
+
+                  {/* Content */}
+                  <div className="text-center">
+                    <h3 className="text-xl font-semibold text-brand-navy mb-2">{step.fullTitle}</h3>
+                    <p className="text-muted-foreground leading-relaxed text-sm">
+                      {step.description}
+                    </p>
+                  </div>
                 </div>
-                <h3 className="text-lg font-semibold mb-2">{step.title}</h3>
-                <p className="text-muted-foreground">{step.description}</p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -243,53 +352,50 @@ export default function HomePage() {
       {/* Trust Badges */}
       <section className="container py-16">
         <div className="flex flex-wrap items-center justify-center gap-8 md:gap-16">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Shield className="h-5 w-5" />
-            <span className="text-sm font-medium">ESIGN Act & UETA Compliant</span>
-          </div>
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Lock className="h-5 w-5" />
-            <span className="text-sm font-medium">Secure Cloud Storage</span>
-          </div>
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Zap className="h-5 w-5" />
-            <span className="text-sm font-medium">Instant Delivery</span>
-          </div>
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <CheckCircle2 className="h-5 w-5" />
-            <span className="text-sm font-medium">Complete Audit Trail</span>
-          </div>
+          {[
+            { icon: Shield, text: "ESIGN Act & UETA Compliant" },
+            { icon: Lock, text: "Secure Cloud Storage" },
+            { icon: Zap, text: "Instant Delivery" },
+            { icon: CheckCircle2, text: "Complete Audit Trail" },
+          ].map((badge, index) => (
+            <div key={index} className="flex items-center gap-3 text-muted-foreground group">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-teal/10 group-hover:bg-brand-teal/20 transition-colors">
+                <badge.icon className="h-5 w-5 text-brand-teal" />
+              </div>
+              <span className="text-sm font-medium">{badge.text}</span>
+            </div>
+          ))}
         </div>
       </section>
 
       {/* Testimonials Section */}
-      <section className="container py-24">
-        <div className="mx-auto max-w-2xl text-center mb-16">
-          <Badge variant="secondary" className="mb-4">
+      <section className="container py-24 md:py-32">
+        <div className="max-w-2xl mx-auto text-center mb-16">
+          <span className="inline-block px-4 py-1.5 rounded-full bg-brand-orange/10 text-brand-orange text-sm font-medium mb-4">
             Testimonials
-          </Badge>
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+          </span>
+          <h2 className="heading-editorial text-4xl md:text-5xl text-brand-navy">
             Loved by teams everywhere
           </h2>
         </div>
 
-        <div className="grid gap-8 md:grid-cols-3">
+        <div className="grid gap-8 md:grid-cols-3 max-w-5xl mx-auto">
           {testimonials.map((testimonial, index) => (
-            <Card key={index}>
-              <CardContent className="pt-6">
+            <Card key={index} className="border-0 bg-white shadow-sm hover-lift">
+              <CardContent className="p-6">
                 <div className="flex gap-1 mb-4">
                   {Array.from({ length: testimonial.rating }).map((_, i) => (
                     <Star
                       key={i}
-                      className="h-5 w-5 fill-yellow-400 text-yellow-400"
+                      className="h-5 w-5 fill-amber-400 text-amber-400"
                     />
                   ))}
                 </div>
-                <blockquote className="text-lg mb-4">
+                <blockquote className="text-lg text-brand-navy mb-6 leading-relaxed">
                   &ldquo;{testimonial.quote}&rdquo;
                 </blockquote>
-                <div>
-                  <p className="font-semibold">{testimonial.author}</p>
+                <div className="pt-4 border-t border-slate-100">
+                  <p className="font-semibold text-brand-navy">{testimonial.author}</p>
                   <p className="text-sm text-muted-foreground">
                     {testimonial.role}
                   </p>
@@ -301,25 +407,29 @@ export default function HomePage() {
       </section>
 
       {/* FAQ Section */}
-      <section id="faq" className="bg-muted/30 py-24">
+      <section id="faq" className="bg-slate-50/50 py-24 md:py-32">
         <div className="container">
-          <div className="mx-auto max-w-2xl text-center mb-16">
-            <Badge variant="secondary" className="mb-4">
+          <div className="max-w-2xl mx-auto text-center mb-16">
+            <span className="inline-block px-4 py-1.5 rounded-full bg-brand-navy/10 text-brand-navy text-sm font-medium mb-4">
               FAQ
-            </Badge>
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            </span>
+            <h2 className="heading-editorial text-4xl md:text-5xl text-brand-navy">
               Frequently asked questions
             </h2>
           </div>
 
-          <div className="mx-auto max-w-3xl">
-            <Accordion type="single" collapsible className="w-full">
+          <div className="max-w-3xl mx-auto">
+            <Accordion type="single" collapsible className="space-y-4">
               {faqs.map((faq, index) => (
-                <AccordionItem key={index} value={`item-${index}`}>
-                  <AccordionTrigger className="text-left">
+                <AccordionItem
+                  key={index}
+                  value={`item-${index}`}
+                  className="bg-white rounded-xl border-0 shadow-sm px-6 data-[state=open]:shadow-teal"
+                >
+                  <AccordionTrigger className="text-left text-brand-navy hover:no-underline py-5">
                     {faq.question}
                   </AccordionTrigger>
-                  <AccordionContent className="text-muted-foreground">
+                  <AccordionContent className="text-muted-foreground pb-5">
                     {faq.answer}
                   </AccordionContent>
                 </AccordionItem>
@@ -330,29 +440,46 @@ export default function HomePage() {
       </section>
 
       {/* CTA Section */}
-      <section className="container py-24">
-        <div className="rounded-2xl bg-primary px-6 py-16 text-center text-primary-foreground md:px-16">
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            Ready to start signing?
-          </h2>
-          <p className="mt-4 text-lg text-primary-foreground/80">
-            Join thousands of users who trust Geek Sign for their document signing needs.
-          </p>
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button size="lg" className="bg-white text-[#07AFBA] hover:bg-white/90" asChild>
-              <Link href="/signup">
-                Get Started for Free
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="bg-transparent border-white/30 text-white hover:bg-white/10 hover:border-white/50"
-              asChild
-            >
-              <Link href="/pricing">View Pricing</Link>
-            </Button>
+      <section className="container py-24 md:py-32">
+        <div className="relative rounded-3xl overflow-hidden">
+          {/* Background - light gradient with teal accent */}
+          <div className="absolute inset-0 bg-gradient-to-br from-brand-teal/5 via-white to-brand-teal/10" />
+          <div className="absolute inset-0 bg-dot-pattern opacity-30" />
+
+          {/* Decorative shapes */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-brand-teal/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-brand-orange/5 rounded-full blur-3xl" />
+
+          {/* Border */}
+          <div className="absolute inset-0 rounded-3xl border border-brand-teal/20" />
+
+          <div className="relative px-6 py-16 md:px-16 md:py-24 text-center">
+            <h2 className="heading-editorial text-4xl md:text-5xl lg:text-6xl text-brand-navy mb-6">
+              Ready to start signing?
+            </h2>
+            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
+              Join thousands of users who trust Geek Sign for their document signing needs.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Button
+                size="lg"
+                className="bg-brand-teal hover:bg-brand-teal/90 text-white text-base px-8 shadow-lg shadow-brand-teal/25"
+                asChild
+              >
+                <Link href="/signup">
+                  Get Started Free
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-brand-navy/20 text-brand-navy hover:bg-brand-navy/5 text-base px-8"
+                asChild
+              >
+                <Link href="/pricing">View Pricing</Link>
+              </Button>
+            </div>
           </div>
         </div>
       </section>
