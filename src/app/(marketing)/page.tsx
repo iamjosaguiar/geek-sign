@@ -339,7 +339,7 @@ export default function HomePage() {
             Join thousands of users who trust Geek Sign for their document signing needs.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button size="lg" variant="secondary" className="bg-white text-primary hover:bg-white/90" asChild>
+            <Button size="lg" className="bg-white text-[#07AFBA] hover:bg-white/90" asChild>
               <Link href="/signup">
                 Get Started for Free
                 <ArrowRight className="ml-2 h-4 w-4" />

@@ -65,9 +65,9 @@ const config: Config = {
         xs: "2px",
       },
       boxShadow: {
-        glass: "0 8px 32px 0 rgba(31, 38, 135, 0.15)",
-        "glass-sm": "0 4px 16px 0 rgba(31, 38, 135, 0.1)",
-        "glass-lg": "0 12px 48px 0 rgba(31, 38, 135, 0.2)",
+        glass: "0 8px 32px 0 rgba(37, 42, 97, 0.15)",
+        "glass-sm": "0 4px 16px 0 rgba(37, 42, 97, 0.1)",
+        "glass-lg": "0 12px 48px 0 rgba(37, 42, 97, 0.2)",
         "glass-inset": "inset 0 1px 1px 0 rgba(255, 255, 255, 0.15)",
       },
       keyframes: {
