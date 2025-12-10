@@ -5,19 +5,19 @@
 @layer base {
   :root {
     --background: 220 20% 97%;
-    --foreground: 233 43% 27%;
+    --foreground: 236 44% 27%;
     --card: 0 0% 100%;
-    --card-foreground: 233 43% 27%;
+    --card-foreground: 236 44% 27%;
     --popover: 0 0% 100%;
-    --popover-foreground: 233 43% 27%;
+    --popover-foreground: 236 44% 27%;
     /* Primary: Teal #07AFBA */
-    --primary: 183 93% 38%;
+    --primary: 184 94% 38%;
     --primary-foreground: 0 0% 100%;
     /* Secondary: Navy #252A61 */
-    --secondary: 233 43% 27%;
+    --secondary: 236 44% 27%;
     --secondary-foreground: 0 0% 100%;
     --muted: 210 40% 96.1%;
-    --muted-foreground: 233 20% 46%;
+    --muted-foreground: 236 20% 46%;
     /* Accent: Orange #F15C3E */
     --accent: 11 87% 59%;
     --accent-foreground: 0 0% 100%;
@@ -25,7 +25,7 @@
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 183 93% 38%;
+    --ring: 184 94% 38%;
     --radius: 0.75rem;
 
     /* Glassmorphism variables */
@@ -38,28 +38,28 @@
   }
 
   .dark {
-    --background: 233 43% 8%;
+    --background: 236 44% 8%;
     --foreground: 210 40% 98%;
-    --card: 233 43% 12%;
+    --card: 236 44% 12%;
     --card-foreground: 210 40% 98%;
-    --popover: 233 43% 12%;
+    --popover: 236 44% 12%;
     --popover-foreground: 210 40% 98%;
     /* Primary: Teal #07AFBA */
-    --primary: 183 93% 38%;
+    --primary: 184 94% 38%;
     --primary-foreground: 0 0% 100%;
     /* Secondary: Navy #252A61 */
-    --secondary: 233 30% 20%;
+    --secondary: 236 30% 20%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 233 30% 18%;
+    --muted: 236 30% 18%;
     --muted-foreground: 215 20.2% 65.1%;
     /* Accent: Orange #F15C3E */
     --accent: 11 87% 59%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 233 30% 25%;
-    --input: 233 30% 18%;
-    --ring: 183 93% 38%;
+    --border: 236 30% 25%;
+    --input: 236 30% 18%;
+    --ring: 184 94% 38%;
 
     /* Dark mode glassmorphism variables */
     --glass-bg: 37 42 97;
@@ -113,14 +113,14 @@
 
   .bg-mesh-gradient {
     background:
-      radial-gradient(at 30% 20%, hsla(183, 93%, 38%, 0.06) 0px, transparent 50%),
-      radial-gradient(at 80% 80%, hsla(233, 43%, 27%, 0.04) 0px, transparent 50%);
+      radial-gradient(at 30% 20%, hsla(184, 94%, 38%, 0.06) 0px, transparent 50%),
+      radial-gradient(at 80% 80%, hsla(236, 44%, 27%, 0.04) 0px, transparent 50%);
   }
 
   .dark .bg-mesh-gradient {
     background:
-      radial-gradient(at 30% 20%, hsla(183, 93%, 38%, 0.08) 0px, transparent 50%),
-      radial-gradient(at 80% 80%, hsla(233, 43%, 27%, 0.06) 0px, transparent 50%);
+      radial-gradient(at 30% 20%, hsla(184, 94%, 38%, 0.08) 0px, transparent 50%),
+      radial-gradient(at 80% 80%, hsla(236, 44%, 27%, 0.06) 0px, transparent 50%);
   }
 }
 
