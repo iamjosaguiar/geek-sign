@@ -136,8 +136,8 @@ export function DashboardSidebar() {
               className={cn(
                 "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
                 pathname === "/dashboard/admin"
-                  ? "bg-purple-500/15 text-purple-700 shadow-glass-sm backdrop-blur-sm dark:text-purple-400"
-                  : "text-purple-600 hover:bg-purple-500/10 hover:text-purple-700 dark:text-purple-400 dark:hover:bg-purple-500/10"
+                  ? "bg-[#F15C3E]/15 text-[#F15C3E] shadow-glass-sm backdrop-blur-sm"
+                  : "text-[#F15C3E] hover:bg-[#F15C3E]/10"
               )}
             >
               <Shield className="h-5 w-5" />

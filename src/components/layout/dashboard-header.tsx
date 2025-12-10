@@ -117,7 +117,7 @@ export function DashboardHeader({ user, profile }: DashboardHeaderProps) {
 
         {/* Plan Badge */}
         {isSuperAdmin ? (
-          <Badge className="hidden md:inline-flex bg-purple-600 hover:bg-purple-700 shadow-glass-sm">
+          <Badge className="hidden md:inline-flex bg-[#252A61] hover:bg-[#252A61]/90 shadow-glass-sm">
             <Shield className="mr-1 h-3 w-3" />
             Admin
           </Badge>
