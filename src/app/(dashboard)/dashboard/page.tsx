@@ -52,21 +52,21 @@ export default async function DashboardPage() {
       value: totalResult?.count || 0,
       icon: FileText,
       color: "text-[#252A61]",
-      bgColor: "bg-[#252A61]/10",
+      bgColor: "bg-[#252A61]/15",
     },
     {
       name: "Pending",
       value: pendingResult?.count || 0,
       icon: Clock,
       color: "text-[#F15C3E]",
-      bgColor: "bg-[#F15C3E]/10",
+      bgColor: "bg-[#F15C3E]/15",
     },
     {
       name: "Completed",
       value: completedResult?.count || 0,
       icon: CheckCircle2,
       color: "text-[#07AFBA]",
-      bgColor: "bg-[#07AFBA]/10",
+      bgColor: "bg-[#07AFBA]/15",
     },
   ];
 
