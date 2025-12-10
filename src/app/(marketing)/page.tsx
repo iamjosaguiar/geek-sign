@@ -339,7 +339,7 @@ export default function HomePage() {
             Join thousands of users who trust Geek Sign for their document signing needs.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button size="lg" variant="secondary" asChild>
+            <Button size="lg" variant="secondary" className="bg-white text-primary hover:bg-white/90" asChild>
               <Link href="/signup">
                 Get Started for Free
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -348,7 +348,7 @@ export default function HomePage() {
             <Button
               size="lg"
               variant="outline"
-              className="bg-transparent border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10"
+              className="bg-transparent border-white/30 text-white hover:bg-white/10 hover:border-white/50"
               asChild
             >
               <Link href="/pricing">View Pricing</Link>
