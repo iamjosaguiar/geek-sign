@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FileSignature } from "lucide-react";
+import Image from "next/image";
 
 export default function AuthLayout({
   children,
@@ -36,9 +36,14 @@ export default function AuthLayout({
           </svg>
         </div>
         <div className="relative z-10 flex flex-col justify-center px-12 text-white">
-          <Link href="/" className="flex items-center gap-2 mb-8">
-            <FileSignature className="h-10 w-10" />
-            <span className="text-3xl font-bold">Geek Sign</span>
+          <Link href="/" className="flex items-center mb-8">
+            <Image
+              src="/logo-white.png"
+              alt="Geek Sign"
+              width={200}
+              height={60}
+              className="h-14 w-auto"
+            />
           </Link>
           <h1 className="text-4xl font-bold mb-4">
             Sign documents online for free
@@ -112,10 +117,15 @@ export default function AuthLayout({
           {/* Mobile logo */}
           <Link
             href="/"
-            className="flex items-center gap-2 mb-8 lg:hidden justify-center"
+            className="flex items-center mb-8 lg:hidden justify-center"
           >
-            <FileSignature className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold">Geek Sign</span>
+            <Image
+              src="/logo.png"
+              alt="Geek Sign"
+              width={160}
+              height={48}
+              className="h-10 w-auto"
+            />
           </Link>
           {children}
         </div>

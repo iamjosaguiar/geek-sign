@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 
 export default function MarketingLayout({
@@ -11,11 +12,15 @@ export default function MarketingLayout({
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b border-brand-navy/5 bg-white/80 backdrop-blur-xl">
         <div className="container flex h-16 items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-teal shadow-sm group-hover:shadow-teal transition-shadow">
-              <span className="text-sm font-bold text-white">G</span>
-            </div>
-            <span className="text-lg font-semibold text-brand-navy">Geek Sign</span>
+          <Link href="/" className="flex items-center group">
+            <Image
+              src="/logo.png"
+              alt="Geek Sign"
+              width={160}
+              height={48}
+              className="h-10 w-auto"
+              priority
+            />
           </Link>
 
           <nav className="hidden md:flex items-center gap-8">
@@ -58,11 +63,14 @@ export default function MarketingLayout({
         <div className="container py-16">
           <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-4">
             <div className="lg:col-span-1">
-              <Link href="/" className="flex items-center gap-2.5 mb-4">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-teal shadow-sm">
-                  <span className="text-sm font-bold text-white">G</span>
-                </div>
-                <span className="text-lg font-semibold text-brand-navy">Geek Sign</span>
+              <Link href="/" className="flex items-center mb-4">
+                <Image
+                  src="/logo.png"
+                  alt="Geek Sign"
+                  width={140}
+                  height={42}
+                  className="h-9 w-auto"
+                />
               </Link>
               <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
                 Simple, secure, and legally binding electronic signatures for everyone.

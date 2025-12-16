@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -78,11 +79,14 @@ export function DashboardSidebar() {
     <aside className="hidden w-64 flex-col border-r border-white/20 bg-white/60 backdrop-blur-xl lg:flex dark:border-white/10 dark:bg-slate-900/60">
       {/* Logo */}
       <div className="flex h-16 items-center border-b border-white/20 px-6 dark:border-white/10">
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary shadow-glass-sm">
-            <span className="text-sm font-bold text-primary-foreground">G</span>
-          </div>
-          <span className="text-lg font-semibold">Geek Sign</span>
+        <Link href="/dashboard" className="flex items-center">
+          <Image
+            src="/logo.png"
+            alt="Geek Sign"
+            width={140}
+            height={42}
+            className="h-8 w-auto"
+          />
         </Link>
       </div>
 
