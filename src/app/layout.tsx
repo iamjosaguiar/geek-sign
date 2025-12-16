@@ -22,6 +22,10 @@ export const metadata: Metadata = {
     default: "Geek Sign - Free E-Signatures | DocuSign Alternative",
     template: "%s | Geek Sign",
   },
+  icons: {
+    icon: "/Profit-Geeks-Logo-Symbol.png",
+    apple: "/Profit-Geeks-Logo-Symbol.png",
+  },
   description:
     "Geek Sign is the easiest way to send and sign documents online—completely free. Send unlimited documents for e-signature, track status in real time, and streamline your workflow.",
   keywords: [
