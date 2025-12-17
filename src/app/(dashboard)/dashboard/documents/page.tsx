@@ -11,23 +11,12 @@ import {
   FileText,
   Upload,
   Search,
-  MoreHorizontal,
   Eye,
-  Edit,
-  Trash2,
-  Download,
-  Send,
   Clock,
   Sparkles,
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { formatDistanceToNow, formatDate } from "@/lib/utils";
+import { DocumentActions } from "@/components/documents/document-actions";
 import { plansConfig } from "@/config/plans";
 import type { Plan } from "@/types";
 
@@ -225,45 +214,11 @@ export default async function DocumentsPage() {
                         <span className="sr-only">View</span>
                       </Link>
                     </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">More options</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <Link href={`/dashboard/documents/${doc.id}`}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Details
-                          </Link>
-                        </DropdownMenuItem>
-                        {doc.status === "draft" && (
-                          <DropdownMenuItem asChild>
-                            <Link href={`/dashboard/documents/${doc.id}/edit`}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit Document
-                            </Link>
-                          </DropdownMenuItem>
-                        )}
-                        {doc.status === "draft" && (
-                          <DropdownMenuItem>
-                            <Send className="mr-2 h-4 w-4" />
-                            Send for Signing
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem>
-                          <Download className="mr-2 h-4 w-4" />
-                          Download
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <DocumentActions
+                      documentId={doc.id}
+                      documentTitle={doc.title}
+                      status={doc.status}
+                    />
                   </div>
                 </div>
               ))}
