@@ -171,6 +171,18 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
         setRecipients(data.recipients || []);
         setFields(data.fields || []);
 
+        // Extract custom fields from existing placed fields
+        const existingCustomFields = (data.fields || [])
+          .filter((f: DocumentField) => f.type.startsWith("custom:"))
+          .map((f: DocumentField) => ({
+            type: f.type,
+            label: f.type.substring(7), // Remove "custom:" prefix
+          }))
+          .filter((f: { type: string; label: string }, index: number, self: Array<{ type: string; label: string }>) =>
+            self.findIndex(t => t.type === f.type) === index // Remove duplicates
+          );
+        setCustomFields(existingCustomFields);
+
         // Auto-select first recipient if available
         if (data.recipients?.length > 0) {
           setSelectedRecipientId(data.recipients[0].id);
