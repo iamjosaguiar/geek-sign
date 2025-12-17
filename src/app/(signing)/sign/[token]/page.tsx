@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { getFieldTypeInfo } from "@/components/pdf/draggable-field";
 
 // Dynamically import PDF components to avoid SSR issues
 const PdfDocument = dynamic(
@@ -199,13 +200,14 @@ export default function SignPage({ params }: SignPageProps) {
 
     setCurrentFieldIndex(index);
     const field = fields[index];
+    const { baseType } = getFieldTypeInfo(field.type);
 
-    if (field.type === "signature" || field.type === "initials") {
+    if (baseType === "signature" || baseType === "initials") {
       setShowSignatureModal(true);
-    } else if (field.type === "date") {
+    } else if (baseType === "date") {
       handleDateFieldClick(index);
-    } else if (field.type === "name" || field.type === "text" || field.type === "email" || field.type === "address" || field.type === "title") {
-      // Open text field modal for text-based fields
+    } else if (baseType === "name" || baseType === "text" || baseType === "email" || baseType === "address" || baseType === "title" || baseType === "custom") {
+      // Open text field modal for text-based fields (including custom fields)
       setTextFieldValue(field.value || "");
       setShowTextFieldModal(true);
     }
@@ -247,9 +249,11 @@ export default function SignPage({ params }: SignPageProps) {
 
   const handleTextFieldSubmit = () => {
     if (!textFieldValue.trim()) {
+      const currentField = fields[currentFieldIndex];
+      const { label: fieldLabel } = currentField ? getFieldTypeInfo(currentField.type) : { label: "value" };
       toast({
         title: "Value required",
-        description: `Please enter your ${fields[currentFieldIndex]?.type}.`,
+        description: `Please enter your ${fieldLabel.toLowerCase()}.`,
         variant: "destructive",
       });
       return;
@@ -500,36 +504,39 @@ export default function SignPage({ params }: SignPageProps) {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {fields.map((field, index) => (
-                  <button
-                    key={field.id}
-                    onClick={() => handleFieldClick(index)}
-                    disabled={!hasConsented}
-                    className={cn(
-                      "w-full flex items-center gap-3 rounded-lg border p-3 text-left transition-colors",
-                      !hasConsented && "opacity-50 cursor-not-allowed",
-                      field.value
-                        ? "border-green-200 bg-green-50"
-                        : currentFieldIndex === index
-                        ? "border-primary bg-primary/5"
-                        : "hover:bg-muted"
-                    )}
-                  >
-                    {field.type === "signature" && <Pen className="h-4 w-4" />}
-                    {field.type === "initials" && <Type className="h-4 w-4" />}
-                    {field.type === "date" && <Calendar className="h-4 w-4" />}
-                    {(field.type === "text" || field.type === "name" || field.type === "email" || field.type === "address" || field.type === "title") && <Type className="h-4 w-4" />}
-                    <div className="flex-1">
-                      <p className="text-sm font-medium capitalize">{field.type}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {field.value ? "Completed" : "Click to fill"}
-                      </p>
-                    </div>
-                    {field.value && (
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                    )}
-                  </button>
-                ))}
+                {fields.map((field, index) => {
+                  const { baseType, label: fieldLabel } = getFieldTypeInfo(field.type);
+                  return (
+                    <button
+                      key={field.id}
+                      onClick={() => handleFieldClick(index)}
+                      disabled={!hasConsented}
+                      className={cn(
+                        "w-full flex items-center gap-3 rounded-lg border p-3 text-left transition-colors",
+                        !hasConsented && "opacity-50 cursor-not-allowed",
+                        field.value
+                          ? "border-green-200 bg-green-50"
+                          : currentFieldIndex === index
+                          ? "border-primary bg-primary/5"
+                          : "hover:bg-muted"
+                      )}
+                    >
+                      {baseType === "signature" && <Pen className="h-4 w-4" />}
+                      {baseType === "initials" && <Type className="h-4 w-4" />}
+                      {baseType === "date" && <Calendar className="h-4 w-4" />}
+                      {(baseType === "text" || baseType === "name" || baseType === "email" || baseType === "address" || baseType === "title" || baseType === "custom") && <Type className="h-4 w-4" />}
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{fieldLabel}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {field.value ? "Completed" : "Click to fill"}
+                        </p>
+                      </div>
+                      {field.value && (
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -634,6 +641,7 @@ export default function SignPage({ params }: SignPageProps) {
                     >
                       {currentPageFields.map((field, index) => {
                         const globalIndex = fields.findIndex(f => f.id === field.id);
+                        const { baseType, label: fieldLabel } = getFieldTypeInfo(field.type);
                         return (
                           <button
                             key={field.id}
@@ -657,13 +665,13 @@ export default function SignPage({ params }: SignPageProps) {
                             {field.value ? (
                               <span
                                 className="text-sm font-medium text-gray-800 p-1 truncate w-full text-center"
-                                style={{ fontFamily: field.type === "signature" || field.type === "initials" ? "cursive" : "inherit" }}
+                                style={{ fontFamily: baseType === "signature" || baseType === "initials" ? "cursive" : "inherit" }}
                               >
                                 {field.value}
                               </span>
                             ) : (
                               <span className="text-xs text-primary">
-                                Click to {field.type}
+                                Click to add {fieldLabel}
                               </span>
                             )}
                           </button>
@@ -882,45 +890,53 @@ export default function SignPage({ params }: SignPageProps) {
       {/* Text Field Modal */}
       <Dialog open={showTextFieldModal} onOpenChange={setShowTextFieldModal}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="capitalize">
-              Enter Your {fields[currentFieldIndex]?.type}
-            </DialogTitle>
-            <DialogDescription>
-              Please enter your {fields[currentFieldIndex]?.type} below.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="textfield" className="capitalize">
-                {fields[currentFieldIndex]?.type}
-              </Label>
-              <Input
-                id="textfield"
-                placeholder={`Enter your ${fields[currentFieldIndex]?.type}`}
-                value={textFieldValue}
-                onChange={(e) => setTextFieldValue(e.target.value)}
-                className="text-lg"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handleTextFieldSubmit();
-                  }
-                }}
-              />
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              onClick={() => setShowTextFieldModal(false)}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleTextFieldSubmit} className="flex-1">
-              Apply
-            </Button>
-          </div>
+          {(() => {
+            const currentField = fields[currentFieldIndex];
+            const { label: fieldLabel } = currentField ? getFieldTypeInfo(currentField.type) : { label: "text" };
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle>
+                    Enter Your {fieldLabel}
+                  </DialogTitle>
+                  <DialogDescription>
+                    Please enter your {fieldLabel.toLowerCase()} below.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="textfield">
+                      {fieldLabel}
+                    </Label>
+                    <Input
+                      id="textfield"
+                      placeholder={`Enter your ${fieldLabel.toLowerCase()}`}
+                      value={textFieldValue}
+                      onChange={(e) => setTextFieldValue(e.target.value)}
+                      className="text-lg"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleTextFieldSubmit();
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowTextFieldModal(false)}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button onClick={handleTextFieldSubmit} className="flex-1">
+                    Apply
+                  </Button>
+                </div>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>

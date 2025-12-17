@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Trash2, Pen, Type, Calendar, CheckSquare, Mail, MapPin, User, GripVertical } from "lucide-react";
+import { Trash2, Pen, Type, Calendar, CheckSquare, Mail, MapPin, User, GripVertical, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface FieldData {
@@ -41,6 +41,7 @@ const fieldIcons: Record<string, typeof Pen> = {
   email: Mail,
   address: MapPin,
   title: User,
+  custom: FileText,
 };
 
 const fieldLabels: Record<string, string> = {
@@ -54,6 +55,20 @@ const fieldLabels: Record<string, string> = {
   address: "Address",
   title: "Title",
 };
+
+// Helper to get field type and label for custom fields
+export function getFieldTypeInfo(type: string): { baseType: string; label: string } {
+  if (type.startsWith("custom:")) {
+    return {
+      baseType: "custom",
+      label: type.substring(7), // Remove "custom:" prefix
+    };
+  }
+  return {
+    baseType: type,
+    label: fieldLabels[type] || type,
+  };
+}
 
 // Color palette for recipients
 export const recipientColors = [
@@ -87,7 +102,8 @@ export function DraggableField({
   const colorIndex = parseInt(recipientColor) % recipientColors.length;
   const colors = recipientColors[colorIndex >= 0 ? colorIndex : 0];
 
-  const Icon = fieldIcons[field.type] || Type;
+  const { baseType, label: fieldLabel } = getFieldTypeInfo(field.type);
+  const Icon = fieldIcons[baseType] || Type;
 
   // Handle mouse/touch move
   useEffect(() => {
@@ -218,8 +234,8 @@ export function DraggableField({
         )}
       >
         <Icon className="h-4 w-4" />
-        <span className="font-medium capitalize text-center leading-tight">
-          {fieldLabels[field.type] || field.type}
+        <span className="font-medium text-center leading-tight">
+          {fieldLabel}
         </span>
         {recipientName && field.height > 50 && (
           <span className="text-[10px] opacity-70 truncate max-w-full px-1">

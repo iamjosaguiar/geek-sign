@@ -15,6 +15,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
@@ -34,9 +42,10 @@ import {
   ChevronRight,
   ZoomIn,
   ZoomOut,
+  Settings2,
 } from "lucide-react";
 import Link from "next/link";
-import { DraggableField, recipientColors, type FieldData } from "@/components/pdf/draggable-field";
+import { DraggableField, recipientColors, getFieldTypeInfo, type FieldData } from "@/components/pdf/draggable-field";
 
 // Dynamically import PDF components to avoid SSR issues with DOMMatrix
 const PdfDocument = dynamic(
@@ -104,6 +113,11 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [autoRelease, setAutoRelease] = useState(true);
   const [canResizeFields, setCanResizeFields] = useState(false);
+
+  // Custom field state
+  const [customFields, setCustomFields] = useState<Array<{ type: string; label: string }>>([]);
+  const [showCustomFieldDialog, setShowCustomFieldDialog] = useState(false);
+  const [newCustomFieldLabel, setNewCustomFieldLabel] = useState("");
 
   // PDF state
   const [numPages, setNumPages] = useState(0);
@@ -279,25 +293,40 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
       if (!selectedRecipientId || !pageContainerRef.current) return;
 
       const rect = pageContainerRef.current.getBoundingClientRect();
-      const fieldType = fieldTypes.find(f => f.type === selectedFieldType);
-      if (!fieldType) return;
+
+      // Check standard field types or custom fields
+      const standardFieldType = fieldTypes.find(f => f.type === selectedFieldType);
+      const customField = customFields.find(f => f.type === selectedFieldType);
+
+      // Default dimensions for custom fields
+      const width = standardFieldType?.width || 150;
+      const height = standardFieldType?.height || 30;
+
+      if (!standardFieldType && !customField) return;
 
       // Calculate click position relative to the unscaled PDF
       const x = (e.clientX - rect.left) / scale;
       const y = (e.clientY - rect.top) / scale;
 
       // Center the field on click position
-      const xPosition = Math.max(0, x - fieldType.width / 2);
-      const yPosition = Math.max(0, y - fieldType.height / 2);
+      const xPosition = Math.max(0, x - width / 2);
+      const yPosition = Math.max(0, y - height / 2);
 
       addField(selectedRecipientId, xPosition, yPosition);
     },
-    [selectedRecipientId, selectedFieldType, scale, currentPage]
+    [selectedRecipientId, selectedFieldType, scale, currentPage, customFields]
   );
 
   const addField = async (recipientId: string, x: number, y: number) => {
-    const fieldType = fieldTypes.find(f => f.type === selectedFieldType);
-    if (!fieldType) return;
+    // Check if it's a standard field type or custom field
+    const standardFieldType = fieldTypes.find(f => f.type === selectedFieldType);
+    const customField = customFields.find(f => f.type === selectedFieldType);
+
+    // Get dimensions - custom fields default to text field size
+    const width = standardFieldType?.width || 150;
+    const height = standardFieldType?.height || 30;
+
+    if (!standardFieldType && !customField) return;
 
     // Optimistic update
     const tempId = `temp-${Date.now()}`;
@@ -309,8 +338,8 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
       page: currentPage,
       xPosition: Math.round(x),
       yPosition: Math.round(y),
-      width: fieldType.width,
-      height: fieldType.height,
+      width,
+      height,
       required: true,
       value: null,
     };
@@ -474,6 +503,54 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
 
   const onPageLoadSuccess = (page: { width: number; height: number }) => {
     setPageSize({ width: page.width, height: page.height });
+  };
+
+  // Add custom field handler
+  const addCustomField = () => {
+    const label = newCustomFieldLabel.trim();
+    if (!label) {
+      toast({
+        title: "Label required",
+        description: "Please enter a label for your custom field.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check for duplicate labels
+    const existingCustom = customFields.find(f => f.label.toLowerCase() === label.toLowerCase());
+    if (existingCustom) {
+      toast({
+        title: "Field already exists",
+        description: `A custom field with the label "${label}" already exists.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newCustomField = {
+      type: `custom:${label}`,
+      label: label,
+    };
+
+    setCustomFields(prev => [...prev, newCustomField]);
+    setSelectedFieldType(newCustomField.type);
+    setNewCustomFieldLabel("");
+    setShowCustomFieldDialog(false);
+
+    toast({
+      title: "Custom field added",
+      description: `"${label}" has been added to your field types.`,
+    });
+  };
+
+  // Remove custom field handler
+  const removeCustomField = (fieldType: string) => {
+    setCustomFields(prev => prev.filter(f => f.type !== fieldType));
+    // If the removed field was selected, switch to signature
+    if (selectedFieldType === fieldType) {
+      setSelectedFieldType("signature");
+    }
   };
 
   // Get fields for current page
@@ -723,6 +800,16 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
                   </div>
                 )}
 
+                {/* Add Custom Field Button */}
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setShowCustomFieldDialog(true)}
+                >
+                  <Settings2 className="mr-2 h-4 w-4" />
+                  Add Custom Field
+                </Button>
+
                 {/* Field Type Buttons */}
                 <div className="space-y-2">
                   {fieldTypes.map((field) => (
@@ -736,6 +823,29 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
                       <field.icon className="mr-2 h-4 w-4" />
                       {field.label}
                     </Button>
+                  ))}
+
+                  {/* Custom Field Buttons */}
+                  {customFields.map((field) => (
+                    <div key={field.type} className="flex gap-1">
+                      <Button
+                        variant={selectedFieldType === field.type ? "default" : "outline"}
+                        className="flex-1 justify-start"
+                        onClick={() => setSelectedFieldType(field.type)}
+                        disabled={!selectedRecipientId}
+                      >
+                        <FileText className="mr-2 h-4 w-4" />
+                        {field.label}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="shrink-0"
+                        onClick={() => removeCustomField(field.type)}
+                      >
+                        <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                      </Button>
+                    </div>
                   ))}
                 </div>
 
@@ -753,7 +863,7 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
 
                 {selectedRecipientId && (
                   <p className="text-sm text-muted-foreground text-center py-2">
-                    Click on the PDF to place a {selectedFieldType} field
+                    Click on the PDF to place a {getFieldTypeInfo(selectedFieldType).label} field
                   </p>
                 )}
               </CardContent>
@@ -828,7 +938,8 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
                       const recipient = recipients.find(r => r.id === field.recipientId);
                       const recipientIndex = getRecipientIndex(field.recipientId);
                       const colors = recipientColors[recipientIndex % recipientColors.length];
-                      const FieldIcon = fieldTypes.find(f => f.type === field.type)?.icon || Type;
+                      const { baseType, label: fieldLabel } = getFieldTypeInfo(field.type);
+                      const FieldIcon = fieldTypes.find(f => f.type === baseType)?.icon || (baseType === "custom" ? FileText : Type);
                       return (
                         <div
                           key={field.id}
@@ -845,7 +956,7 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
                               <FieldIcon className={`h-4 w-4 ${colors.text}`} />
                             </div>
                             <div>
-                              <p className="text-sm font-medium capitalize">{field.type}</p>
+                              <p className="text-sm font-medium">{fieldLabel}</p>
                               <p className="text-xs text-muted-foreground">
                                 Page {field.page} • {recipient?.name || recipient?.email || "Unassigned"}
                               </p>
@@ -871,6 +982,46 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
           </div>
         </div>
       </div>
+
+      {/* Custom Field Dialog */}
+      <Dialog open={showCustomFieldDialog} onOpenChange={setShowCustomFieldDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Custom Field</DialogTitle>
+            <DialogDescription>
+              Create a custom text field with your own label. This field will appear as an open text input for signers.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="custom-field-label">Field Label</Label>
+              <Input
+                id="custom-field-label"
+                placeholder="e.g. Company Name, Job Title, Phone Number"
+                value={newCustomFieldLabel}
+                onChange={(e) => setNewCustomFieldLabel(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addCustomField();
+                  }
+                }}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowCustomFieldDialog(false);
+              setNewCustomFieldLabel("");
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={addCustomField}>
+              Add Field
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
