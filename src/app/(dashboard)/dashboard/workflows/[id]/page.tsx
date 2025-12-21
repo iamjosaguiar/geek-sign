@@ -345,25 +345,263 @@ export default function WorkflowDetailPage() {
                       placeholder="Step name"
                     />
 
+                    {/* Step-specific configuration */}
+                    {step.type === "send_document" && (
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Recipients
+                          </label>
+                          {step.config.recipients?.map((recipient: string, ridx: number) => (
+                            <div key={ridx} className="flex gap-2 mb-2">
+                              <input
+                                type="email"
+                                value={recipient}
+                                onChange={(e) => {
+                                  const newRecipients = [...step.config.recipients];
+                                  newRecipients[ridx] = e.target.value;
+                                  updateStep(index, "config", {
+                                    ...step.config,
+                                    recipients: newRecipients,
+                                  });
+                                }}
+                                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                                placeholder="recipient@example.com"
+                              />
+                              <button
+                                onClick={() => {
+                                  const newRecipients = step.config.recipients.filter(
+                                    (_: any, i: number) => i !== ridx
+                                  );
+                                  updateStep(index, "config", {
+                                    ...step.config,
+                                    recipients: newRecipients,
+                                  });
+                                }}
+                                className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ))}
+                          <button
+                            onClick={() => {
+                              updateStep(index, "config", {
+                                ...step.config,
+                                recipients: [...(step.config.recipients || []), ""],
+                              });
+                            }}
+                            className="text-sm text-blue-600 hover:text-blue-700"
+                          >
+                            + Add Recipient
+                          </button>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Email Message (Optional)
+                          </label>
+                          <textarea
+                            value={step.config.message || ""}
+                            onChange={(e) =>
+                              updateStep(index, "config", {
+                                ...step.config,
+                                message: e.target.value,
+                              })
+                            }
+                            rows={3}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                            placeholder="Custom message for recipients..."
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {step.type === "await_signature" && (
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Timeout (seconds)
+                          </label>
+                          <input
+                            type="number"
+                            value={step.config.timeout}
+                            onChange={(e) =>
+                              updateStep(index, "config", {
+                                ...step.config,
+                                timeout: parseInt(e.target.value),
+                              })
+                            }
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                            min="0"
+                            placeholder="86400"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Time to wait for signatures (default: 24 hours)
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
                     {step.type === "approval_gate" && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Approval Mode
-                        </label>
-                        <select
-                          value={step.config.mode}
-                          onChange={(e) =>
-                            updateStep(index, "config", {
-                              ...step.config,
-                              mode: e.target.value,
-                            })
-                          }
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
-                        >
-                          <option value="any">Any (1 approval needed)</option>
-                          <option value="all">All (all approvals needed)</option>
-                          <option value="majority">Majority (&gt;50% needed)</option>
-                        </select>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Approvers
+                          </label>
+                          {step.config.approvers?.map((approver: string, aidx: number) => (
+                            <div key={aidx} className="flex gap-2 mb-2">
+                              <input
+                                type="email"
+                                value={approver}
+                                onChange={(e) => {
+                                  const newApprovers = [...step.config.approvers];
+                                  newApprovers[aidx] = e.target.value;
+                                  updateStep(index, "config", {
+                                    ...step.config,
+                                    approvers: newApprovers,
+                                  });
+                                }}
+                                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                                placeholder="approver@example.com"
+                              />
+                              <button
+                                onClick={() => {
+                                  const newApprovers = step.config.approvers.filter(
+                                    (_: any, i: number) => i !== aidx
+                                  );
+                                  updateStep(index, "config", {
+                                    ...step.config,
+                                    approvers: newApprovers,
+                                  });
+                                }}
+                                className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ))}
+                          <button
+                            onClick={() => {
+                              updateStep(index, "config", {
+                                ...step.config,
+                                approvers: [...(step.config.approvers || []), ""],
+                              });
+                            }}
+                            className="text-sm text-blue-600 hover:text-blue-700"
+                          >
+                            + Add Approver
+                          </button>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Approval Mode
+                          </label>
+                          <select
+                            value={step.config.mode}
+                            onChange={(e) =>
+                              updateStep(index, "config", {
+                                ...step.config,
+                                mode: e.target.value,
+                              })
+                            }
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                          >
+                            <option value="any">Any (1 approval needed)</option>
+                            <option value="all">All (all approvals needed)</option>
+                            <option value="majority">Majority (&gt;50% needed)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Timeout (seconds, optional)
+                          </label>
+                          <input
+                            type="number"
+                            value={step.config.timeout || ""}
+                            onChange={(e) =>
+                              updateStep(index, "config", {
+                                ...step.config,
+                                timeout: e.target.value ? parseInt(e.target.value) : null,
+                              })
+                            }
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                            min="0"
+                            placeholder="Leave empty for no timeout"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {step.type === "conditional_branch" && (
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Condition Expression
+                          </label>
+                          <input
+                            type="text"
+                            value={step.config.condition}
+                            onChange={(e) =>
+                              updateStep(index, "config", {
+                                ...step.config,
+                                condition: e.target.value,
+                              })
+                            }
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg font-mono"
+                            placeholder='e.g., field.amount > 1000 OR field.type == "urgent"'
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Use field.name for field values, operators: ==, !=, &gt;, &lt;, AND, OR
+                          </p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Then Go To Step
+                          </label>
+                          <select
+                            value={step.config.thenStep}
+                            onChange={(e) =>
+                              updateStep(index, "config", {
+                                ...step.config,
+                                thenStep: e.target.value,
+                              })
+                            }
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                          >
+                            <option value="">Select step...</option>
+                            {steps
+                              .filter((s, i) => i !== index)
+                              .map((s, i) => (
+                                <option key={s.id} value={s.id}>
+                                  {s.name || `Step ${i + 1}`}
+                                </option>
+                              ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Else Go To Step
+                          </label>
+                          <select
+                            value={step.config.elseStep}
+                            onChange={(e) =>
+                              updateStep(index, "config", {
+                                ...step.config,
+                                elseStep: e.target.value,
+                              })
+                            }
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                          >
+                            <option value="">Select step...</option>
+                            {steps
+                              .filter((s, i) => i !== index)
+                              .map((s, i) => (
+                                <option key={s.id} value={s.id}>
+                                  {s.name || `Step ${i + 1}`}
+                                </option>
+                              ))}
+                          </select>
+                        </div>
                       </div>
                     )}
 
