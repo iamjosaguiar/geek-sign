@@ -14,6 +14,7 @@ import {
   CreditCard,
   Users,
   Shield,
+  Workflow,
 } from "lucide-react";
 
 const navigation = [
@@ -36,6 +37,11 @@ const navigation = [
     name: "Templates",
     href: "/dashboard/templates",
     icon: FolderOpen,
+  },
+  {
+    name: "Workflows",
+    href: "/dashboard/workflows",
+    icon: Workflow,
   },
 ];
 
