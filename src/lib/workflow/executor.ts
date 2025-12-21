@@ -17,14 +17,13 @@ import {
   ValidationError,
   TimeoutError,
 } from "./retry";
+import { eventEmitter, EventPayload } from "./events";
 
 export class WorkflowExecutor {
   private retryManager: RetryManager;
-  private eventHandlers: Map<string, ((payload: WorkflowEventPayload) => void)[]>;
 
   constructor() {
     this.retryManager = new RetryManager();
-    this.eventHandlers = new Map();
   }
 
   // Start workflow execution
@@ -583,17 +582,11 @@ export class WorkflowExecutor {
       .where(eq(workflowExecutions.id, executionId));
   }
 
-  // Event handling
-  on(event: string, handler: (payload: WorkflowEventPayload) => void): void {
-    if (!this.eventHandlers.has(event)) {
-      this.eventHandlers.set(event, []);
-    }
-    this.eventHandlers.get(event)!.push(handler);
-  }
-
+  // Emit workflow event using global event emitter
   private emitEvent(payload: WorkflowEventPayload): void {
-    const handlers = this.eventHandlers.get(payload.event) || [];
-    handlers.forEach((handler) => handler(payload));
+    eventEmitter.emit(payload as unknown as EventPayload).catch((error) => {
+      console.error(`Error emitting event ${payload.event}:`, error);
+    });
   }
 }
 
