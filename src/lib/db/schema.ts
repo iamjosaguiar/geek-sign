@@ -7,6 +7,7 @@ import {
   boolean,
   jsonb,
   primaryKey,
+  index,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -199,11 +200,79 @@ export const auditLogs = pgTable("audit_logs", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Workflow tables
+export const workflows = pgTable("workflows", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  teamId: uuid("team_id").references(() => teams.id),
+  name: text("name").notNull(),
+  description: text("description"),
+  // Workflow definition stored as JSON (steps, conditions, etc.)
+  definition: jsonb("definition").notNull(),
+  status: text("status").default("active").notNull(), // active, inactive, deleted
+  version: text("version").default("1.0.0").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("workflows_user_id_idx").on(table.userId),
+  statusIdx: index("workflows_status_idx").on(table.status),
+  teamIdIdx: index("workflows_team_id_idx").on(table.teamId),
+}));
+
+export const workflowExecutions = pgTable("workflow_executions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workflowId: uuid("workflow_id")
+    .notNull()
+    .references(() => workflows.id, { onDelete: "cascade" }),
+  documentId: uuid("document_id")
+    .notNull()
+    .references(() => documents.id, { onDelete: "cascade" }),
+  status: text("status").default("pending").notNull(), // pending, running, completed, failed
+  // Execution context - variables passed between steps
+  context: jsonb("context"),
+  currentStepIndex: integer("current_step_index").default(0),
+  errorMessage: text("error_message"),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  workflowIdIdx: index("workflow_executions_workflow_id_idx").on(table.workflowId),
+  documentIdIdx: index("workflow_executions_document_id_idx").on(table.documentId),
+  statusIdx: index("workflow_executions_status_idx").on(table.status),
+  completedAtIdx: index("workflow_executions_completed_at_idx").on(table.completedAt),
+}));
+
+export const workflowSteps = pgTable("workflow_steps", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  executionId: uuid("execution_id")
+    .notNull()
+    .references(() => workflowExecutions.id, { onDelete: "cascade" }),
+  stepIndex: integer("step_index").notNull(),
+  stepType: text("step_type").notNull(), // send_document, await_signature, approval_gate, conditional_branch, parallel, wait
+  status: text("status").default("pending").notNull(), // pending, running, completed, failed, skipped
+  assignedTo: uuid("assigned_to").references(() => users.id),
+  // Step execution result (approval decision, condition result, etc.)
+  result: jsonb("result"),
+  errorMessage: text("error_message"),
+  retryCount: integer("retry_count").default(0).notNull(),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  executionIdIdx: index("workflow_steps_execution_id_idx").on(table.executionId),
+  statusIdx: index("workflow_steps_status_idx").on(table.status),
+  assignedToIdx: index("workflow_steps_assigned_to_idx").on(table.assignedTo),
+}));
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   documents: many(documents),
   teams: many(teamMembers),
   templates: many(templates),
+  workflows: many(workflows),
 }));
 
 export const documentsRelations = relations(documents, ({ one, many }) => ({
@@ -236,5 +305,40 @@ export const documentFieldsRelations = relations(documentFields, ({ one }) => ({
   recipient: one(recipients, {
     fields: [documentFields.recipientId],
     references: [recipients.id],
+  }),
+}));
+
+export const workflowsRelations = relations(workflows, ({ one, many }) => ({
+  user: one(users, {
+    fields: [workflows.userId],
+    references: [users.id],
+  }),
+  team: one(teams, {
+    fields: [workflows.teamId],
+    references: [teams.id],
+  }),
+  executions: many(workflowExecutions),
+}));
+
+export const workflowExecutionsRelations = relations(workflowExecutions, ({ one, many }) => ({
+  workflow: one(workflows, {
+    fields: [workflowExecutions.workflowId],
+    references: [workflows.id],
+  }),
+  document: one(documents, {
+    fields: [workflowExecutions.documentId],
+    references: [documents.id],
+  }),
+  steps: many(workflowSteps),
+}));
+
+export const workflowStepsRelations = relations(workflowSteps, ({ one }) => ({
+  execution: one(workflowExecutions, {
+    fields: [workflowSteps.executionId],
+    references: [workflowExecutions.id],
+  }),
+  assignedUser: one(users, {
+    fields: [workflowSteps.assignedTo],
+    references: [users.id],
   }),
 }));
