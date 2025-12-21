@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Play, Trash2, Edit, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { Plus, Play, Trash2, Edit, Clock, CheckCircle2, XCircle, History } from "lucide-react";
 
 interface Workflow {
   id: string;
@@ -95,13 +95,22 @@ export default function WorkflowsPage() {
             Automate your document signing process with workflows
           </p>
         </div>
-        <button
-          onClick={() => router.push("/dashboard/workflows/new")}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          Create Workflow
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => router.push("/dashboard/workflows/executions")}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <History className="w-5 h-5" />
+            View Executions
+          </button>
+          <button
+            onClick={() => router.push("/dashboard/workflows/new")}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            Create Workflow
+          </button>
+        </div>
       </div>
 
       {workflows.length === 0 ? (

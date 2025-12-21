@@ -2,27 +2,23 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { workflowExecutions, workflows, documents } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 
-// GET /api/workflows/executions/[id] - Get execution details
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+// GET /api/workflows/executions - List all workflow executions for user
+export async function GET(request: Request) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get execution with workflow and document details
-    const result = await db
+    // Get all executions with workflow and document details
+    const userExecutions = await db
       .select({
         execution: workflowExecutions,
         workflow: {
           id: workflows.id,
           name: workflows.name,
-          description: workflows.description,
           definition: workflows.definition,
         },
         document: {
@@ -33,29 +29,24 @@ export async function GET(
       .from(workflowExecutions)
       .innerJoin(workflows, eq(workflowExecutions.workflowId, workflows.id))
       .innerJoin(documents, eq(workflowExecutions.documentId, documents.id))
-      .where(
-        and(
-          eq(workflowExecutions.id, params.id),
-          eq(workflows.userId, session.user.id)
-        )
-      )
-      .limit(1);
+      .where(eq(workflows.userId, session.user.id))
+      .orderBy(desc(workflowExecutions.createdAt));
 
-    if (result.length === 0) {
-      return NextResponse.json({ error: "Execution not found" }, { status: 404 });
-    }
+    // Format the response
+    const executions = userExecutions.map((row) => ({
+      ...row.execution,
+      workflow: row.workflow,
+      document: row.document,
+    }));
 
-    const execution = {
-      ...result[0].execution,
-      workflow: result[0].workflow,
-      document: result[0].document,
-    };
-
-    return NextResponse.json({ execution });
+    return NextResponse.json({
+      executions,
+      count: executions.length,
+    });
   } catch (error) {
-    console.error("Error fetching execution:", error);
+    console.error("Error fetching workflow executions:", error);
     return NextResponse.json(
-      { error: "Failed to fetch execution" },
+      { error: "Failed to fetch workflow executions" },
       { status: 500 }
     );
   }
