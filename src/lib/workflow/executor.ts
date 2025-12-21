@@ -1,5 +1,5 @@
 // Workflow execution engine
-import { db, workflows, workflowExecutions, workflowSteps } from "@/lib/db";
+import { db, workflows, workflowExecutions, workflowSteps, approvalRequests, approvalResponses } from "@/lib/db";
 import { eq, and } from "drizzle-orm";
 import {
   WorkflowDefinition,
@@ -310,11 +310,171 @@ export class WorkflowExecutor {
     step: WorkflowStep,
     context: WorkflowContext
   ): Promise<StepResult> {
-    // TODO: Implement approval gate logic
+    const config = step.config as import("./types").ApprovalGateConfig;
+
+    // Calculate required approvals based on mode
+    const totalApprovers = config.approvers.length;
+    let requiredApprovals: number;
+
+    switch (config.mode) {
+      case "any":
+        requiredApprovals = 1;
+        break;
+      case "all":
+        requiredApprovals = totalApprovers;
+        break;
+      case "majority":
+        requiredApprovals = Math.ceil(totalApprovers / 2);
+        break;
+      default:
+        requiredApprovals = totalApprovers;
+    }
+
+    // Create approval request
+    const [approvalRequest] = await db
+      .insert(approvalRequests)
+      .values({
+        stepId: step.id,
+        mode: config.mode,
+        status: "pending",
+        requiredApprovals,
+        currentApprovals: 0,
+        currentRejections: 0,
+        expiresAt: config.timeout
+          ? new Date(Date.now() + config.timeout * 1000)
+          : null,
+      })
+      .returning();
+
+    // TODO: Send notification emails to approvers
+    // This should be handled by the event system once implemented
+
     return {
       success: true,
-      data: { approved: true },
+      data: {
+        approvalRequestId: approvalRequest.id,
+        status: "pending",
+        requiredApprovals,
+        totalApprovers,
+        mode: config.mode,
+      },
     };
+  }
+
+  // Check if approval request is complete
+  async checkApprovalStatus(approvalRequestId: string): Promise<{
+    complete: boolean;
+    approved: boolean;
+    expired: boolean;
+  }> {
+    const request = await db.query.approvalRequests.findFirst({
+      where: eq(approvalRequests.id, approvalRequestId),
+      with: {
+        responses: true,
+      },
+    });
+
+    if (!request) {
+      throw new ValidationError(`Approval request ${approvalRequestId} not found`);
+    }
+
+    // Check if expired
+    if (request.expiresAt && new Date() > request.expiresAt) {
+      if (request.status === "pending") {
+        await db
+          .update(approvalRequests)
+          .set({ status: "expired", completedAt: new Date() })
+          .where(eq(approvalRequests.id, approvalRequestId));
+      }
+      return { complete: true, approved: false, expired: true };
+    }
+
+    // Check if already completed
+    if (request.status !== "pending") {
+      return {
+        complete: true,
+        approved: request.status === "approved",
+        expired: request.status === "expired",
+      };
+    }
+
+    // Check if approval threshold met
+    const approvals = request.currentApprovals;
+    const rejections = request.currentRejections;
+
+    if (approvals >= request.requiredApprovals) {
+      await db
+        .update(approvalRequests)
+        .set({ status: "approved", completedAt: new Date() })
+        .where(eq(approvalRequests.id, approvalRequestId));
+      return { complete: true, approved: true, expired: false };
+    }
+
+    // Check if rejection threshold met (cannot reach required approvals)
+    const remainingApprovers = request.requiredApprovals - (approvals + rejections);
+    if (rejections > remainingApprovers) {
+      await db
+        .update(approvalRequests)
+        .set({ status: "rejected", completedAt: new Date() })
+        .where(eq(approvalRequests.id, approvalRequestId));
+      return { complete: true, approved: false, expired: false };
+    }
+
+    return { complete: false, approved: false, expired: false };
+  }
+
+  // Process approval response
+  async processApprovalResponse(
+    approvalRequestId: string,
+    approverId: string,
+    decision: "approved" | "rejected",
+    comment?: string
+  ): Promise<void> {
+    // Check if already responded
+    const existingResponse = await db.query.approvalResponses.findFirst({
+      where: and(
+        eq(approvalResponses.requestId, approvalRequestId),
+        eq(approvalResponses.approverId, approverId)
+      ),
+    });
+
+    if (existingResponse) {
+      throw new ValidationError("Approver has already responded");
+    }
+
+    // Create response
+    await db.insert(approvalResponses).values({
+      requestId: approvalRequestId,
+      approverId,
+      decision,
+      comment,
+    });
+
+    // Update approval request counts
+    const request = await db.query.approvalRequests.findFirst({
+      where: eq(approvalRequests.id, approvalRequestId),
+    });
+
+    if (!request) {
+      throw new ValidationError(`Approval request ${approvalRequestId} not found`);
+    }
+
+    if (decision === "approved") {
+      await db
+        .update(approvalRequests)
+        .set({ currentApprovals: request.currentApprovals + 1 })
+        .where(eq(approvalRequests.id, approvalRequestId));
+    } else {
+      await db
+        .update(approvalRequests)
+        .set({ currentRejections: request.currentRejections + 1 })
+        .where(eq(approvalRequests.id, approvalRequestId));
+    }
+
+    // Check if approval is now complete
+    await this.checkApprovalStatus(approvalRequestId);
+
+    // TODO: Emit event to resume workflow if complete
   }
 
   private async executeConditionalBranch(

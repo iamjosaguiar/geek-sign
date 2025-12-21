@@ -267,6 +267,45 @@ export const workflowSteps = pgTable("workflow_steps", {
   assignedToIdx: index("workflow_steps_assigned_to_idx").on(table.assignedTo),
 }));
 
+// Approval tables
+export const approvalRequests = pgTable("approval_requests", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  stepId: uuid("step_id")
+    .notNull()
+    .references(() => workflowSteps.id, { onDelete: "cascade" }),
+  mode: text("mode").default("all").notNull(), // any, all, majority
+  status: text("status").default("pending").notNull(), // pending, approved, rejected, expired
+  requiredApprovals: integer("required_approvals").notNull(), // number of approvals needed
+  currentApprovals: integer("current_approvals").default(0).notNull(),
+  currentRejections: integer("current_rejections").default(0).notNull(),
+  expiresAt: timestamp("expires_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  stepIdIdx: index("approval_requests_step_id_idx").on(table.stepId),
+  statusIdx: index("approval_requests_status_idx").on(table.status),
+  expiresAtIdx: index("approval_requests_expires_at_idx").on(table.expiresAt),
+}));
+
+export const approvalResponses = pgTable("approval_responses", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  requestId: uuid("request_id")
+    .notNull()
+    .references(() => approvalRequests.id, { onDelete: "cascade" }),
+  approverId: uuid("approver_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  decision: text("decision").notNull(), // approved, rejected
+  comment: text("comment"),
+  respondedAt: timestamp("responded_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  requestIdIdx: index("approval_responses_request_id_idx").on(table.requestId),
+  approverIdIdx: index("approval_responses_approver_id_idx").on(table.approverId),
+  respondedAtIdx: index("approval_responses_responded_at_idx").on(table.respondedAt),
+}));
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   documents: many(documents),
@@ -332,13 +371,36 @@ export const workflowExecutionsRelations = relations(workflowExecutions, ({ one,
   steps: many(workflowSteps),
 }));
 
-export const workflowStepsRelations = relations(workflowSteps, ({ one }) => ({
+export const workflowStepsRelations = relations(workflowSteps, ({ one, many }) => ({
   execution: one(workflowExecutions, {
     fields: [workflowSteps.executionId],
     references: [workflowExecutions.id],
   }),
   assignedUser: one(users, {
     fields: [workflowSteps.assignedTo],
+    references: [users.id],
+  }),
+  approvalRequest: one(approvalRequests, {
+    fields: [workflowSteps.id],
+    references: [approvalRequests.stepId],
+  }),
+}));
+
+export const approvalRequestsRelations = relations(approvalRequests, ({ one, many }) => ({
+  step: one(workflowSteps, {
+    fields: [approvalRequests.stepId],
+    references: [workflowSteps.id],
+  }),
+  responses: many(approvalResponses),
+}));
+
+export const approvalResponsesRelations = relations(approvalResponses, ({ one }) => ({
+  request: one(approvalRequests, {
+    fields: [approvalResponses.requestId],
+    references: [approvalRequests.id],
+  }),
+  approver: one(users, {
+    fields: [approvalResponses.approverId],
     references: [users.id],
   }),
 }));
