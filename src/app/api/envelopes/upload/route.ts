@@ -55,8 +55,7 @@ export async function POST(request: NextRequest) {
         envelopeId: envelope.id,
         fileUrl: blob.url,
         fileName: file.name,
-        fileSize: file.size,
-        orderIndex: 1, // First document in envelope
+        orderIndex: 0, // First document in envelope (0-indexed)
       })
       .returning();
 
