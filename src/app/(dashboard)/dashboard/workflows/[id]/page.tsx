@@ -425,11 +425,11 @@ export default function WorkflowDetailPage() {
                               <label className="block text-xs text-gray-600 mb-1">Days</label>
                               <input
                                 type="number"
-                                value={step.config.timeoutDays || Math.floor(step.config.timeout / 86400)}
+                                value={step.config.timeoutDays !== undefined ? step.config.timeoutDays : Math.floor(step.config.timeout / 86400)}
                                 onChange={(e) => {
                                   const days = parseInt(e.target.value) || 0;
-                                  const hours = step.config.timeoutHours || 0;
-                                  const minutes = step.config.timeoutMinutes || 0;
+                                  const hours = step.config.timeoutHours !== undefined ? step.config.timeoutHours : Math.floor((step.config.timeout % 86400) / 3600);
+                                  const minutes = step.config.timeoutMinutes !== undefined ? step.config.timeoutMinutes : Math.floor((step.config.timeout % 3600) / 60);
                                   updateStep(index, "config", {
                                     ...step.config,
                                     timeout: days * 86400 + hours * 3600 + minutes * 60,
@@ -447,11 +447,11 @@ export default function WorkflowDetailPage() {
                               <label className="block text-xs text-gray-600 mb-1">Hours</label>
                               <input
                                 type="number"
-                                value={step.config.timeoutHours || Math.floor((step.config.timeout % 86400) / 3600)}
+                                value={step.config.timeoutHours !== undefined ? step.config.timeoutHours : Math.floor((step.config.timeout % 86400) / 3600)}
                                 onChange={(e) => {
-                                  const days = step.config.timeoutDays || 0;
+                                  const days = step.config.timeoutDays !== undefined ? step.config.timeoutDays : Math.floor(step.config.timeout / 86400);
                                   const hours = parseInt(e.target.value) || 0;
-                                  const minutes = step.config.timeoutMinutes || 0;
+                                  const minutes = step.config.timeoutMinutes !== undefined ? step.config.timeoutMinutes : Math.floor((step.config.timeout % 3600) / 60);
                                   updateStep(index, "config", {
                                     ...step.config,
                                     timeout: days * 86400 + hours * 3600 + minutes * 60,
@@ -470,10 +470,10 @@ export default function WorkflowDetailPage() {
                               <label className="block text-xs text-gray-600 mb-1">Minutes</label>
                               <input
                                 type="number"
-                                value={step.config.timeoutMinutes || Math.floor((step.config.timeout % 3600) / 60)}
+                                value={step.config.timeoutMinutes !== undefined ? step.config.timeoutMinutes : Math.floor((step.config.timeout % 3600) / 60)}
                                 onChange={(e) => {
-                                  const days = step.config.timeoutDays || 0;
-                                  const hours = step.config.timeoutHours || 0;
+                                  const days = step.config.timeoutDays !== undefined ? step.config.timeoutDays : Math.floor(step.config.timeout / 86400);
+                                  const hours = step.config.timeoutHours !== undefined ? step.config.timeoutHours : Math.floor((step.config.timeout % 86400) / 3600);
                                   const minutes = parseInt(e.target.value) || 0;
                                   updateStep(index, "config", {
                                     ...step.config,
@@ -660,12 +660,12 @@ export default function WorkflowDetailPage() {
                             <label className="block text-xs text-gray-600 mb-1">Days</label>
                             <input
                               type="number"
-                              value={step.config.durationDays || Math.floor(step.config.duration / 86400)}
+                              value={step.config.durationDays !== undefined ? step.config.durationDays : Math.floor(step.config.duration / 86400)}
                               onChange={(e) => {
                                 const days = parseInt(e.target.value) || 0;
-                                const hours = step.config.durationHours || 0;
-                                const minutes = step.config.durationMinutes || 0;
-                                const seconds = step.config.durationSeconds || 0;
+                                const hours = step.config.durationHours !== undefined ? step.config.durationHours : Math.floor((step.config.duration % 86400) / 3600);
+                                const minutes = step.config.durationMinutes !== undefined ? step.config.durationMinutes : Math.floor((step.config.duration % 3600) / 60);
+                                const seconds = step.config.durationSeconds !== undefined ? step.config.durationSeconds : (step.config.duration % 60);
                                 updateStep(index, "config", {
                                   ...step.config,
                                   duration: days * 86400 + hours * 3600 + minutes * 60 + seconds,
@@ -684,12 +684,12 @@ export default function WorkflowDetailPage() {
                             <label className="block text-xs text-gray-600 mb-1">Hours</label>
                             <input
                               type="number"
-                              value={step.config.durationHours || Math.floor((step.config.duration % 86400) / 3600)}
+                              value={step.config.durationHours !== undefined ? step.config.durationHours : Math.floor((step.config.duration % 86400) / 3600)}
                               onChange={(e) => {
-                                const days = step.config.durationDays || 0;
+                                const days = step.config.durationDays !== undefined ? step.config.durationDays : Math.floor(step.config.duration / 86400);
                                 const hours = parseInt(e.target.value) || 0;
-                                const minutes = step.config.durationMinutes || 0;
-                                const seconds = step.config.durationSeconds || 0;
+                                const minutes = step.config.durationMinutes !== undefined ? step.config.durationMinutes : Math.floor((step.config.duration % 3600) / 60);
+                                const seconds = step.config.durationSeconds !== undefined ? step.config.durationSeconds : (step.config.duration % 60);
                                 updateStep(index, "config", {
                                   ...step.config,
                                   duration: days * 86400 + hours * 3600 + minutes * 60 + seconds,
@@ -709,12 +709,12 @@ export default function WorkflowDetailPage() {
                             <label className="block text-xs text-gray-600 mb-1">Minutes</label>
                             <input
                               type="number"
-                              value={step.config.durationMinutes || Math.floor((step.config.duration % 3600) / 60)}
+                              value={step.config.durationMinutes !== undefined ? step.config.durationMinutes : Math.floor((step.config.duration % 3600) / 60)}
                               onChange={(e) => {
-                                const days = step.config.durationDays || 0;
-                                const hours = step.config.durationHours || 0;
+                                const days = step.config.durationDays !== undefined ? step.config.durationDays : Math.floor(step.config.duration / 86400);
+                                const hours = step.config.durationHours !== undefined ? step.config.durationHours : Math.floor((step.config.duration % 86400) / 3600);
                                 const minutes = parseInt(e.target.value) || 0;
-                                const seconds = step.config.durationSeconds || 0;
+                                const seconds = step.config.durationSeconds !== undefined ? step.config.durationSeconds : (step.config.duration % 60);
                                 updateStep(index, "config", {
                                   ...step.config,
                                   duration: days * 86400 + hours * 3600 + minutes * 60 + seconds,
@@ -734,11 +734,11 @@ export default function WorkflowDetailPage() {
                             <label className="block text-xs text-gray-600 mb-1">Seconds</label>
                             <input
                               type="number"
-                              value={step.config.durationSeconds || (step.config.duration % 60)}
+                              value={step.config.durationSeconds !== undefined ? step.config.durationSeconds : (step.config.duration % 60)}
                               onChange={(e) => {
-                                const days = step.config.durationDays || 0;
-                                const hours = step.config.durationHours || 0;
-                                const minutes = step.config.durationMinutes || 0;
+                                const days = step.config.durationDays !== undefined ? step.config.durationDays : Math.floor(step.config.duration / 86400);
+                                const hours = step.config.durationHours !== undefined ? step.config.durationHours : Math.floor((step.config.duration % 86400) / 3600);
+                                const minutes = step.config.durationMinutes !== undefined ? step.config.durationMinutes : Math.floor((step.config.duration % 3600) / 60);
                                 const seconds = parseInt(e.target.value) || 0;
                                 updateStep(index, "config", {
                                   ...step.config,
