@@ -306,6 +306,25 @@ export const approvalResponses = pgTable("approval_responses", {
   respondedAtIdx: index("approval_responses_responded_at_idx").on(table.respondedAt),
 }));
 
+export const approvalTokens = pgTable("approval_tokens", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  requestId: uuid("request_id")
+    .notNull()
+    .references(() => approvalRequests.id, { onDelete: "cascade" }),
+  approverId: uuid("approver_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  token: text("token").notNull().unique(),
+  decision: text("decision").notNull(), // approved, rejected
+  used: boolean("used").default(false).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  tokenIdx: index("approval_tokens_token_idx").on(table.token),
+  requestIdIdx: index("approval_tokens_request_id_idx").on(table.requestId),
+  usedIdx: index("approval_tokens_used_idx").on(table.used),
+}));
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   documents: many(documents),
