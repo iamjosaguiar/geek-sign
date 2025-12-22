@@ -12,13 +12,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Trash2, Plus, ArrowUpDown, User } from "lucide-react";
@@ -199,23 +192,20 @@ export function EnvelopeEditor({
 
                 <div className="space-y-2">
                   <Label htmlFor={`routing-${index}`}>Routing Order</Label>
-                  <Select
+                  <select
+                    id={`routing-${index}`}
                     value={recipient.routingOrder.toString()}
-                    onValueChange={(value) =>
-                      updateRecipient(index, "routingOrder", parseInt(value))
+                    onChange={(e) =>
+                      updateRecipient(index, "routingOrder", parseInt(e.target.value))
                     }
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   >
-                    <SelectTrigger id={`routing-${index}`}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {routingOrderOptions.map((order) => (
-                        <SelectItem key={order} value={order.toString()}>
-                          Order {order}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    {routingOrderOptions.map((order) => (
+                      <option key={order} value={order.toString()}>
+                        Order {order}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
