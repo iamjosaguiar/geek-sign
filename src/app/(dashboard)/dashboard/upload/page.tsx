@@ -96,7 +96,7 @@ export default function UploadPage() {
       // Create FormData for file upload
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("title", title.trim());
+      formData.append("name", title.trim());
 
       // Upload file via API (using new envelope system)
       const response = await fetch("/api/envelopes/upload", {
