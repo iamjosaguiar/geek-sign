@@ -280,21 +280,47 @@ export default function NewWorkflowPage() {
                       <div className="space-y-3">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Timeout (hours)
+                            Timeout
                           </label>
-                          <input
-                            type="number"
-                            value={Math.floor(step.config.timeout / 3600)}
-                            onChange={(e) =>
-                              updateStep(index, "config", {
-                                ...step.config,
-                                timeout: parseInt(e.target.value) * 3600,
-                              })
-                            }
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
-                            min="1"
-                            placeholder="24"
-                          />
+                          <div className="flex gap-2">
+                            <input
+                              type="number"
+                              value={step.config.timeoutValue || Math.floor(step.config.timeout / 3600)}
+                              onChange={(e) => {
+                                const value = parseInt(e.target.value) || 1;
+                                const unit = step.config.timeoutUnit || "hours";
+                                const multiplier = unit === "days" ? 86400 : unit === "hours" ? 3600 : 60;
+                                updateStep(index, "config", {
+                                  ...step.config,
+                                  timeout: value * multiplier,
+                                  timeoutValue: value,
+                                  timeoutUnit: unit,
+                                });
+                              }}
+                              className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                              min="1"
+                              placeholder="24"
+                            />
+                            <select
+                              value={step.config.timeoutUnit || "hours"}
+                              onChange={(e) => {
+                                const value = step.config.timeoutValue || Math.floor(step.config.timeout / 3600);
+                                const unit = e.target.value;
+                                const multiplier = unit === "days" ? 86400 : unit === "hours" ? 3600 : 60;
+                                updateStep(index, "config", {
+                                  ...step.config,
+                                  timeout: value * multiplier,
+                                  timeoutValue: value,
+                                  timeoutUnit: unit,
+                                });
+                              }}
+                              className="px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                            >
+                              <option value="minutes">Minutes</option>
+                              <option value="hours">Hours</option>
+                              <option value="days">Days</option>
+                            </select>
+                          </div>
                           <p className="text-xs text-gray-500 mt-1">
                             Time to wait for signatures (default: 24 hours)
                           </p>
@@ -373,21 +399,58 @@ export default function NewWorkflowPage() {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Timeout (hours, optional)
+                            Timeout (optional)
                           </label>
-                          <input
-                            type="number"
-                            value={step.config.timeout ? Math.floor(step.config.timeout / 3600) : ""}
-                            onChange={(e) =>
-                              updateStep(index, "config", {
-                                ...step.config,
-                                timeout: e.target.value ? parseInt(e.target.value) * 3600 : null,
-                              })
-                            }
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
-                            min="1"
-                            placeholder="Leave empty for no timeout"
-                          />
+                          <div className="flex gap-2">
+                            <input
+                              type="number"
+                              value={step.config.timeoutValue || (step.config.timeout ? Math.floor(step.config.timeout / 3600) : "")}
+                              onChange={(e) => {
+                                if (!e.target.value) {
+                                  updateStep(index, "config", {
+                                    ...step.config,
+                                    timeout: null,
+                                    timeoutValue: "",
+                                    timeoutUnit: "hours",
+                                  });
+                                  return;
+                                }
+                                const value = parseInt(e.target.value) || 1;
+                                const unit = step.config.timeoutUnit || "hours";
+                                const multiplier = unit === "days" ? 86400 : unit === "hours" ? 3600 : 60;
+                                updateStep(index, "config", {
+                                  ...step.config,
+                                  timeout: value * multiplier,
+                                  timeoutValue: value,
+                                  timeoutUnit: unit,
+                                });
+                              }}
+                              className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                              min="1"
+                              placeholder="Leave empty for no timeout"
+                            />
+                            <select
+                              value={step.config.timeoutUnit || "hours"}
+                              onChange={(e) => {
+                                const value = step.config.timeoutValue || (step.config.timeout ? Math.floor(step.config.timeout / 3600) : 1);
+                                if (!value) return;
+                                const unit = e.target.value;
+                                const multiplier = unit === "days" ? 86400 : unit === "hours" ? 3600 : 60;
+                                updateStep(index, "config", {
+                                  ...step.config,
+                                  timeout: value * multiplier,
+                                  timeoutValue: value,
+                                  timeoutUnit: unit,
+                                });
+                              }}
+                              className="px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                              disabled={!step.config.timeoutValue && !step.config.timeout}
+                            >
+                              <option value="minutes">Minutes</option>
+                              <option value="hours">Hours</option>
+                              <option value="days">Days</option>
+                            </select>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -395,21 +458,47 @@ export default function NewWorkflowPage() {
                     {step.type === "wait" && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Wait Duration (minutes)
+                          Wait Duration
                         </label>
-                        <input
-                          type="number"
-                          value={Math.floor(step.config.duration / 60)}
-                          onChange={(e) =>
-                            updateStep(index, "config", {
-                              ...step.config,
-                              duration: parseInt(e.target.value) * 60,
-                            })
-                          }
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
-                          min="1"
-                          placeholder="60"
-                        />
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            value={step.config.durationValue || Math.floor(step.config.duration / 60)}
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value) || 1;
+                              const unit = step.config.durationUnit || "minutes";
+                              const multiplier = unit === "days" ? 86400 : unit === "hours" ? 3600 : 60;
+                              updateStep(index, "config", {
+                                ...step.config,
+                                duration: value * multiplier,
+                                durationValue: value,
+                                durationUnit: unit,
+                              });
+                            }}
+                            className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                            min="1"
+                            placeholder="60"
+                          />
+                          <select
+                            value={step.config.durationUnit || "minutes"}
+                            onChange={(e) => {
+                              const value = step.config.durationValue || Math.floor(step.config.duration / 60);
+                              const unit = e.target.value;
+                              const multiplier = unit === "days" ? 86400 : unit === "hours" ? 3600 : 60;
+                              updateStep(index, "config", {
+                                ...step.config,
+                                duration: value * multiplier,
+                                durationValue: value,
+                                durationUnit: unit,
+                              });
+                            }}
+                            className="px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                          >
+                            <option value="minutes">Minutes</option>
+                            <option value="hours">Hours</option>
+                            <option value="days">Days</option>
+                          </select>
+                        </div>
                         <p className="text-xs text-gray-500 mt-1">
                           Time to wait before proceeding to next step
                         </p>
