@@ -112,6 +112,56 @@ export const teamInvitations = pgTable("team_invitations", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// NEW: DocuSign-style envelope system (container for multiple documents)
+export const envelopes = pgTable("envelopes", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  teamId: uuid("team_id").references(() => teams.id),
+  templateId: uuid("template_id").references(() => templates.id),
+  name: text("name").notNull(), // renamed from "title"
+  status: text("status").default("draft").notNull(), // draft, sent, in_progress, completed, declined, voided
+  currentRoutingOrder: integer("current_routing_order").default(1).notNull(),
+  // Email customization
+  emailSubject: text("email_subject"),
+  emailMessage: text("email_message"),
+  // Expiration and reminders
+  expiresAt: timestamp("expires_at"),
+  reminderEnabled: boolean("reminder_enabled").default(true),
+  reminderDelay: integer("reminder_delay").default(3), // days before first reminder
+  reminderFrequency: integer("reminder_frequency").default(3), // days between reminders
+  // Completion
+  completedAt: timestamp("completed_at"),
+  voidedAt: timestamp("voided_at"),
+  voidReason: text("void_reason"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("envelopes_user_id_idx").on(table.userId),
+  statusIdx: index("envelopes_status_idx").on(table.status),
+  teamIdIdx: index("envelopes_team_id_idx").on(table.teamId),
+  templateIdIdx: index("envelopes_template_id_idx").on(table.templateId),
+}));
+
+// NEW: Individual documents within an envelope (supports multiple PDFs)
+export const envelopeDocuments = pgTable("envelope_documents", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  envelopeId: uuid("envelope_id")
+    .notNull()
+    .references(() => envelopes.id, { onDelete: "cascade" }),
+  fileUrl: text("file_url").notNull(),
+  fileName: text("file_name").notNull(),
+  fileSize: integer("file_size"),
+  pageCount: integer("page_count"),
+  documentHash: text("document_hash"), // SHA-256 for integrity
+  orderIndex: integer("order_index").default(1).notNull(), // order within envelope (Doc 1, Doc 2, etc.)
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  envelopeIdIdx: index("envelope_documents_envelope_id_idx").on(table.envelopeId),
+}));
+
+// OLD: Keep for migration (will be renamed to documents_backup)
 export const documents = pgTable("documents", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id")
@@ -133,6 +183,40 @@ export const documents = pgTable("documents", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// NEW: Recipients at envelope level with DocuSign-style routing
+export const envelopeRecipients = pgTable("envelope_recipients", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  envelopeId: uuid("envelope_id")
+    .notNull()
+    .references(() => envelopes.id, { onDelete: "cascade" }),
+  email: text("email").notNull(),
+  name: text("name"),
+  roleName: text("role_name"), // if created from template role
+  routingOrder: integer("routing_order").default(1).notNull(), // DocuSign routing order
+  action: text("action").default("needs_to_sign").notNull(), // needs_to_sign, needs_to_approve, receives_copy, needs_to_view
+  status: text("status").default("pending").notNull(), // pending, sent, viewed, completed, declined
+  signingToken: uuid("signing_token").defaultRandom().notNull(),
+  // Timestamps
+  sentAt: timestamp("sent_at"),
+  viewedAt: timestamp("viewed_at"),
+  completedAt: timestamp("completed_at"),
+  declinedAt: timestamp("declined_at"),
+  declineReason: text("decline_reason"),
+  // ESIGN Act compliance - consent tracking
+  consentGiven: boolean("consent_given").default(false),
+  consentTimestamp: timestamp("consent_timestamp"),
+  consentIpAddress: text("consent_ip_address"),
+  // Audit info
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  envelopeIdIdx: index("envelope_recipients_envelope_id_idx").on(table.envelopeId),
+  routingOrderIdx: index("envelope_recipients_routing_order_idx").on(table.routingOrder),
+  statusIdx: index("envelope_recipients_status_idx").on(table.status),
+}));
+
+// OLD: Keep for migration (will be renamed to recipients_backup)
 export const recipients = pgTable("recipients", {
   id: uuid("id").primaryKey().defaultRandom(),
   documentId: uuid("document_id")
@@ -155,6 +239,30 @@ export const recipients = pgTable("recipients", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// NEW: Fields linked to specific envelope document + recipient
+export const envelopeFields = pgTable("envelope_fields", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  envelopeDocumentId: uuid("envelope_document_id")
+    .notNull()
+    .references(() => envelopeDocuments.id, { onDelete: "cascade" }),
+  recipientId: uuid("recipient_id")
+    .notNull()
+    .references(() => envelopeRecipients.id, { onDelete: "cascade" }),
+  type: text("type").notNull(), // signature, initial, date, text, checkbox
+  page: integer("page").default(1).notNull(),
+  xPosition: integer("x_position").notNull(),
+  yPosition: integer("y_position").notNull(),
+  width: integer("width").notNull(),
+  height: integer("height").notNull(),
+  required: boolean("required").default(true).notNull(),
+  value: text("value"), // THIS CONTAINS SIGNATURE DATA - must be preserved!
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  envelopeDocumentIdIdx: index("envelope_fields_envelope_document_id_idx").on(table.envelopeDocumentId),
+  recipientIdIdx: index("envelope_fields_recipient_id_idx").on(table.recipientId),
+}));
+
+// OLD: Keep for migration (will be renamed to document_fields_backup)
 export const documentFields = pgTable("document_fields", {
   id: uuid("id").primaryKey().defaultRandom(),
   documentId: uuid("document_id")
@@ -174,6 +282,7 @@ export const documentFields = pgTable("document_fields", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Templates with DocuSign-style roles
 export const templates = pgTable("templates", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id")
@@ -182,23 +291,38 @@ export const templates = pgTable("templates", {
   teamId: uuid("team_id").references(() => teams.id),
   name: text("name").notNull(),
   description: text("description"),
-  fileUrl: text("file_url"),
-  fields: jsonb("fields"),
+  // Template documents with roles instead of specific recipients
+  // Format: [{ fileUrl, fileName, orderIndex, fields: [{ type, page, x, y, width, height, roleName, required }] }]
+  documents: jsonb("documents"),
+  // Roles for template (replaced old fields)
+  // Format: [{ name: "Manager", routingOrder: 1, action: "needs_to_sign" }, { name: "Employee", routingOrder: 2 }]
+  roles: jsonb("roles"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  userIdIdx: index("templates_user_id_idx").on(table.userId),
+  teamIdIdx: index("templates_team_id_idx").on(table.teamId),
+}));
 
+// Audit logs - supports both old documents and new envelopes during migration
 export const auditLogs = pgTable("audit_logs", {
   id: uuid("id").primaryKey().defaultRandom(),
-  documentId: uuid("document_id")
-    .notNull()
-    .references(() => documents.id, { onDelete: "cascade" }),
+  // NEW: envelope-based logging
+  envelopeId: uuid("envelope_id").references(() => envelopes.id, { onDelete: "cascade" }),
+  envelopeRecipientId: uuid("envelope_recipient_id").references(() => envelopeRecipients.id),
+  // OLD: document-based logging (kept for migration, will be removed after data migration)
+  documentId: uuid("document_id").references(() => documents.id, { onDelete: "cascade" }),
   recipientId: uuid("recipient_id").references(() => recipients.id),
+  // Common fields
   action: text("action").notNull(),
   ipAddress: text("ip_address"),
   details: jsonb("details"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  envelopeIdIdx: index("audit_logs_envelope_id_idx").on(table.envelopeId),
+  documentIdIdx: index("audit_logs_document_id_idx").on(table.documentId),
+  actionIdx: index("audit_logs_action_idx").on(table.action),
+}));
 
 // Workflow tables
 export const workflows = pgTable("workflows", {
@@ -327,7 +451,8 @@ export const approvalTokens = pgTable("approval_tokens", {
 
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
-  documents: many(documents),
+  documents: many(documents), // OLD - for migration
+  envelopes: many(envelopes), // NEW
   teams: many(teamMembers),
   templates: many(templates),
   workflows: many(workflows),
@@ -363,6 +488,53 @@ export const documentFieldsRelations = relations(documentFields, ({ one }) => ({
   recipient: one(recipients, {
     fields: [documentFields.recipientId],
     references: [recipients.id],
+  }),
+}));
+
+// NEW: Envelope relations
+export const envelopesRelations = relations(envelopes, ({ one, many }) => ({
+  user: one(users, {
+    fields: [envelopes.userId],
+    references: [users.id],
+  }),
+  team: one(teams, {
+    fields: [envelopes.teamId],
+    references: [teams.id],
+  }),
+  template: one(templates, {
+    fields: [envelopes.templateId],
+    references: [templates.id],
+  }),
+  documents: many(envelopeDocuments),
+  recipients: many(envelopeRecipients),
+  auditLogs: many(auditLogs),
+}));
+
+export const envelopeDocumentsRelations = relations(envelopeDocuments, ({ one, many }) => ({
+  envelope: one(envelopes, {
+    fields: [envelopeDocuments.envelopeId],
+    references: [envelopes.id],
+  }),
+  fields: many(envelopeFields),
+}));
+
+export const envelopeRecipientsRelations = relations(envelopeRecipients, ({ one, many }) => ({
+  envelope: one(envelopes, {
+    fields: [envelopeRecipients.envelopeId],
+    references: [envelopes.id],
+  }),
+  fields: many(envelopeFields),
+  auditLogs: many(auditLogs),
+}));
+
+export const envelopeFieldsRelations = relations(envelopeFields, ({ one }) => ({
+  envelopeDocument: one(envelopeDocuments, {
+    fields: [envelopeFields.envelopeDocumentId],
+    references: [envelopeDocuments.id],
+  }),
+  recipient: one(envelopeRecipients, {
+    fields: [envelopeFields.recipientId],
+    references: [envelopeRecipients.id],
   }),
 }));
 
