@@ -187,7 +187,7 @@ export async function GET(
     });
 
     // Return the PDF as a download
-    return new NextResponse(modifiedPdfBytes, {
+    return new NextResponse(Buffer.from(modifiedPdfBytes), {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${envelope.name}.pdf"`,

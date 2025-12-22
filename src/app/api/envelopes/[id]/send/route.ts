@@ -113,7 +113,7 @@ export async function POST(
       details: {
         recipientCount: recipients.length,
         recipientEmails: recipients.map((r) => r.email),
-        routingOrders: [...new Set(recipients.map(r => r.routingOrder))],
+        routingOrders: Array.from(new Set(recipients.map(r => r.routingOrder))),
       },
     });
 

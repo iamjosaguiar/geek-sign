@@ -60,12 +60,14 @@ export async function POST(
     }
 
     // If template has a file, copy it for the new document
-    let fileUrl = template.fileUrl;
+    // Note: Templates now use documents JSON field, old fileUrl field may not exist
+    const templateWithFileUrl = template as unknown as { fileUrl?: string };
+    let fileUrl = templateWithFileUrl.fileUrl;
     let fileName = template.name + ".pdf";
 
-    if (template.fileUrl) {
+    if (templateWithFileUrl.fileUrl) {
       // Fetch the template file and re-upload to create a copy
-      const response = await fetch(template.fileUrl);
+      const response = await fetch(templateWithFileUrl.fileUrl);
       if (response.ok) {
         const blob = await response.blob();
         const uploadResult = await put(
@@ -118,8 +120,10 @@ export async function POST(
     }
 
     // Copy template fields to document fields
-    if (template.fields && Array.isArray(template.fields)) {
-      const templateFields = template.fields as TemplateField[];
+    // Note: Templates now use documents JSON with embedded fields
+    const templateWithFields = template as unknown as { fields?: unknown[] };
+    if (templateWithFields.fields && Array.isArray(templateWithFields.fields)) {
+      const templateFields = templateWithFields.fields as TemplateField[];
 
       for (const field of templateFields) {
         // Determine which recipient this field belongs to

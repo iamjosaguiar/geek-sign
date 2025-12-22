@@ -328,15 +328,23 @@ async function handleEnvelopeSigning(
       });
     } else {
       // This recipient signed, but more recipients remain
+      // Count remaining unsigned recipients
+      const allRecipients = await db
+        .select()
+        .from(envelopeRecipients)
+        .where(eq(envelopeRecipients.envelopeId, envelope.id));
+
+      const remainingCount = allRecipients.filter(
+        (r) => r.status !== "completed" && r.status !== "declined"
+      ).length;
+
       await sendSenderDocumentSignedEmail({
         senderName: sender.name || sender.email,
         senderEmail: sender.email,
         documentTitle: envelope.name,
         signerName: recipient.name,
         signerEmail: recipient.email,
-        remainingSigners: routingResult.newRoutingOrder
-          ? `Routing order ${routingResult.newRoutingOrder} notified`
-          : "unknown",
+        remainingSigners: remainingCount,
         documentUrl: envelopeUrl,
       });
     }
