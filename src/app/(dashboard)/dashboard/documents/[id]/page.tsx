@@ -21,11 +21,10 @@ import {
   Loader2,
 } from "lucide-react";
 import { formatDate, formatDistanceToNow } from "@/lib/utils";
-import { SendDocumentButton } from "@/components/documents/send-document-button";
+import { SendDocumentWithWorkflow } from "@/components/documents/send-document-with-workflow";
 import { ResendEmailsButton } from "@/components/documents/resend-emails-button";
 import { DownloadButton } from "@/components/documents/download-button";
 import { DeleteDocumentButton } from "@/components/documents/delete-document-button";
-import { ExecuteWorkflowButton } from "@/components/workflows/execute-workflow-button";
 
 // Dynamically import PDF preview to avoid SSR issues
 const DocumentPreview = dynamic(
@@ -160,8 +159,9 @@ export default async function DocumentPage({ params }: DocumentPageProps) {
                     Edit
                   </Link>
                 </Button>
-                <SendDocumentButton
+                <SendDocumentWithWorkflow
                   documentId={document.id}
+                  documentTitle={document.title}
                   hasRecipients={docRecipients.length > 0}
                   hasFields={docFields.length > 0}
                 />
@@ -170,11 +170,6 @@ export default async function DocumentPage({ params }: DocumentPageProps) {
             {document.status === "pending" && (
               <ResendEmailsButton documentId={document.id} />
             )}
-            <ExecuteWorkflowButton
-              documentId={document.id}
-              documentTitle={document.title}
-              variant="outline"
-            />
             <DownloadButton
               documentId={document.id}
               documentTitle={document.title}
