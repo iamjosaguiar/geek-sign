@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Trash2, Save } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, GripVertical } from "lucide-react";
+import { DndContext, closestCenter, DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 type StepType = "send_document" | "await_signature" | "approval_gate" | "wait";
 
@@ -21,7 +24,7 @@ export default function NewWorkflowPage() {
   const [saving, setSaving] = useState(false);
 
   const addStep = (type: StepType) => {
-    const stepId = `step_${steps.length}`;
+    const stepId = crypto.randomUUID();
     const newStep: WorkflowStep = {
       id: stepId,
       type,
@@ -40,6 +43,33 @@ export default function NewWorkflowPage() {
     updated[index] = { ...updated[index], [field]: value };
     setSteps(updated);
   };
+
+  const moveStep = (activeId: string, overId: string) => {
+    const activeIndex = steps.findIndex((step) => step.id === activeId);
+    const overIndex = steps.findIndex((step) => step.id === overId);
+
+    if (activeIndex === -1 || overIndex === -1) return;
+
+    const newSteps = [...steps];
+    const [movedStep] = newSteps.splice(activeIndex, 1);
+    newSteps.splice(overIndex, 0, movedStep);
+    setSteps(newSteps);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      moveStep(active.id as string, over.id as string);
+    }
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
 
   const getStepName = (type: StepType): string => {
     const names = {
@@ -110,6 +140,76 @@ export default function NewWorkflowPage() {
     { type: "wait", label: "Wait", description: "Wait for a specified duration" },
   ];
 
+  // Sortable Step Item Component
+  function SortableStepItem({
+    step,
+    index,
+    children
+  }: {
+    step: WorkflowStep;
+    index: number;
+    children: React.ReactNode;
+  }) {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ id: step.id });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        className="border border-gray-200 rounded-lg p-4 bg-gray-50"
+      >
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center gap-3 flex-1">
+            {/* Drag Handle */}
+            <button
+              {...attributes}
+              {...listeners}
+              className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-200 rounded touch-none"
+              aria-label="Drag to reorder"
+              type="button"
+            >
+              <GripVertical className="w-5 h-5 text-gray-400" />
+            </button>
+
+            <span className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
+              {index + 1}
+            </span>
+
+            <div>
+              <h3 className="font-medium text-gray-900">{step.name}</h3>
+              <p className="text-sm text-gray-600">{getStepName(step.type)}</p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => removeStep(index)}
+            className="text-red-600 hover:text-red-800"
+            type="button"
+          >
+            <Trash2 className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="ml-11 space-y-3">
+          {children}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="mb-8">
@@ -170,33 +270,11 @@ export default function NewWorkflowPage() {
               <p className="text-sm text-gray-500">Add your first step from the options below</p>
             </div>
           ) : (
-            <div className="space-y-4 mb-6">
-              {steps.map((step, index) => (
-                <div
-                  key={step.id}
-                  className="border border-gray-200 rounded-lg p-4 bg-gray-50"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3">
-                        <span className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
-                          {index + 1}
-                        </span>
-                        <div>
-                          <h3 className="font-medium text-gray-900">{step.name}</h3>
-                          <p className="text-sm text-gray-600">{getStepName(step.type)}</p>
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => removeStep(index)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-                  </div>
-
-                  <div className="ml-11 space-y-3">
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={steps.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                <div className="space-y-4 mb-6">
+                  {steps.map((step, index) => (
+                    <SortableStepItem key={step.id} step={step} index={index}>
                     <input
                       type="text"
                       value={step.name}
@@ -623,10 +701,11 @@ export default function NewWorkflowPage() {
                         </p>
                       </div>
                     )}
-                  </div>
+                    </SortableStepItem>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </SortableContext>
+            </DndContext>
           )}
 
           <div>
