@@ -418,20 +418,20 @@ export default function WorkflowDetailPage() {
                       <div className="space-y-3">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Timeout (seconds)
+                            Timeout (hours)
                           </label>
                           <input
                             type="number"
-                            value={step.config.timeout}
+                            value={Math.floor(step.config.timeout / 3600)}
                             onChange={(e) =>
                               updateStep(index, "config", {
                                 ...step.config,
-                                timeout: parseInt(e.target.value),
+                                timeout: parseInt(e.target.value) * 3600,
                               })
                             }
                             className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
-                            min="0"
-                            placeholder="86400"
+                            min="1"
+                            placeholder="24"
                           />
                           <p className="text-xs text-gray-500 mt-1">
                             Time to wait for signatures (default: 24 hours)
@@ -511,19 +511,19 @@ export default function WorkflowDetailPage() {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Timeout (seconds, optional)
+                            Timeout (hours, optional)
                           </label>
                           <input
                             type="number"
-                            value={step.config.timeout || ""}
+                            value={step.config.timeout ? Math.floor(step.config.timeout / 3600) : ""}
                             onChange={(e) =>
                               updateStep(index, "config", {
                                 ...step.config,
-                                timeout: e.target.value ? parseInt(e.target.value) : null,
+                                timeout: e.target.value ? parseInt(e.target.value) * 3600 : null,
                               })
                             }
                             className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
-                            min="0"
+                            min="1"
                             placeholder="Leave empty for no timeout"
                           />
                         </div>
@@ -533,20 +533,24 @@ export default function WorkflowDetailPage() {
                     {step.type === "wait" && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Wait Duration (seconds)
+                          Wait Duration (minutes)
                         </label>
                         <input
                           type="number"
-                          value={step.config.duration}
+                          value={Math.floor(step.config.duration / 60)}
                           onChange={(e) =>
                             updateStep(index, "config", {
                               ...step.config,
-                              duration: parseInt(e.target.value),
+                              duration: parseInt(e.target.value) * 60,
                             })
                           }
                           className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
-                          min="0"
+                          min="1"
+                          placeholder="60"
                         />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Time to wait before proceeding to next step
+                        </p>
                       </div>
                     )}
                   </div>
