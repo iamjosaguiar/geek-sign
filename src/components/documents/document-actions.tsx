@@ -85,16 +85,16 @@ export function DocumentActions({ documentId, documentTitle, status }: DocumentA
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem asChild>
-            <Link href={`/dashboard/documents/${documentId}`}>
+            <Link href={`/dashboard/envelopes/${documentId}`}>
               <Eye className="mr-2 h-4 w-4" />
               View Details
             </Link>
           </DropdownMenuItem>
           {status === "draft" && (
             <DropdownMenuItem asChild>
-              <Link href={`/dashboard/documents/${documentId}/edit`}>
+              <Link href={`/dashboard/envelopes/${documentId}/edit`}>
                 <Edit className="mr-2 h-4 w-4" />
-                Edit Document
+                Edit Recipients
               </Link>
             </DropdownMenuItem>
           )}

@@ -116,8 +116,8 @@ export default function UploadPage() {
         description: "Your document has been uploaded successfully.",
       });
 
-      // Redirect to document editor (works with envelopes during migration)
-      router.push(`/dashboard/documents/${envelope.id}/edit`);
+      // Redirect to envelope editor
+      router.push(`/dashboard/envelopes/${envelope.id}/edit`);
     } catch (error) {
       console.error("Upload error:", error);
       toast({

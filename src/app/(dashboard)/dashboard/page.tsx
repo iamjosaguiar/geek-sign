@@ -143,9 +143,9 @@ export default async function DashboardPage() {
               </Link>
             </Button>
             <Button variant="outline" className="h-auto flex-col gap-2 p-4" asChild>
-              <Link href="/dashboard/documents">
+              <Link href="/dashboard/envelopes">
                 <FileText className="h-6 w-6" />
-                <span>View All Documents</span>
+                <span>View All Envelopes</span>
               </Link>
             </Button>
           </div>
@@ -160,7 +160,7 @@ export default async function DashboardPage() {
             <CardDescription>Your latest document activity</CardDescription>
           </div>
           <Button variant="ghost" size="sm" asChild>
-            <Link href="/dashboard/documents">
+            <Link href="/dashboard/envelopes">
               View all
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
@@ -188,7 +188,7 @@ export default async function DashboardPage() {
                   <div className="flex items-center gap-3">
                     {getStatusBadge(doc.status)}
                     <Button variant="ghost" size="sm" asChild>
-                      <Link href={`/dashboard/documents/${doc.id}`}>
+                      <Link href={`/dashboard/envelopes/${doc.id}`}>
                         View
                       </Link>
                     </Button>

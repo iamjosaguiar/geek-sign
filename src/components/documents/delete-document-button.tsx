@@ -25,7 +25,7 @@ interface DeleteDocumentButtonProps {
 export function DeleteDocumentButton({
   documentId,
   documentTitle,
-  redirectTo = "/dashboard/documents",
+  redirectTo = "/dashboard/envelopes",
 }: DeleteDocumentButtonProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
