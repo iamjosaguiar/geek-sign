@@ -35,17 +35,17 @@ export function DeleteDocumentButton({
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      const response = await fetch(`/api/documents/${documentId}`, {
+      const response = await fetch(`/api/envelopes/${documentId}`, {
         method: "DELETE",
       });
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Failed to delete document");
+        throw new Error(data.error || "Failed to delete envelope");
       }
 
       toast({
-        title: "Document deleted",
+        title: "Envelope deleted",
         description: `"${documentTitle}" has been deleted.`,
       });
 
@@ -55,7 +55,7 @@ export function DeleteDocumentButton({
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete document",
+        description: error instanceof Error ? error.message : "Failed to delete envelope",
         variant: "destructive",
       });
       setIsDeleting(false);
@@ -72,13 +72,13 @@ export function DeleteDocumentButton({
         disabled={isDeleting}
       >
         <Trash2 className="mr-2 h-4 w-4" />
-        Delete Document
+        Delete Envelope
       </Button>
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Document</AlertDialogTitle>
+            <AlertDialogTitle>Delete Envelope</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete &ldquo;{documentTitle}&rdquo;? This action cannot be undone.
             </AlertDialogDescription>
