@@ -6,7 +6,7 @@ import { eq, and, inArray } from "drizzle-orm";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -15,12 +15,14 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
+
     // Verify envelope ownership
     const [envelope] = await db
       .select()
       .from(envelopes)
       .where(
-        and(eq(envelopes.id, params.id), eq(envelopes.userId, session.user.id))
+        and(eq(envelopes.id, id), eq(envelopes.userId, session.user.id))
       );
 
     if (!envelope) {
@@ -31,7 +33,7 @@ export async function GET(
     const documents = await db
       .select({ id: envelopeDocuments.id })
       .from(envelopeDocuments)
-      .where(eq(envelopeDocuments.envelopeId, params.id));
+      .where(eq(envelopeDocuments.envelopeId, id));
 
     if (documents.length === 0) {
       return NextResponse.json({ fields: [] });
@@ -60,7 +62,7 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -69,12 +71,14 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
+
     // Verify envelope ownership
     const [envelope] = await db
       .select()
       .from(envelopes)
       .where(
-        and(eq(envelopes.id, params.id), eq(envelopes.userId, session.user.id))
+        and(eq(envelopes.id, id), eq(envelopes.userId, session.user.id))
       );
 
     if (!envelope) {
@@ -107,7 +111,7 @@ export async function POST(
       const [firstDoc] = await db
         .select()
         .from(envelopeDocuments)
-        .where(eq(envelopeDocuments.envelopeId, params.id))
+        .where(eq(envelopeDocuments.envelopeId, id))
         .limit(1);
 
       if (!firstDoc) {
@@ -126,7 +130,7 @@ export async function POST(
       .where(
         and(
           eq(envelopeDocuments.id, documentId),
-          eq(envelopeDocuments.envelopeId, params.id)
+          eq(envelopeDocuments.envelopeId, id)
         )
       );
 
@@ -144,7 +148,7 @@ export async function POST(
       .where(
         and(
           eq(envelopeRecipients.id, recipientId),
-          eq(envelopeRecipients.envelopeId, params.id)
+          eq(envelopeRecipients.envelopeId, id)
         )
       );
 

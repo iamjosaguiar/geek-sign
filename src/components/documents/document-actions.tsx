@@ -47,17 +47,17 @@ export function DocumentActions({ documentId, documentTitle, status }: DocumentA
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      const response = await fetch(`/api/documents/${documentId}`, {
+      const response = await fetch(`/api/envelopes/${documentId}`, {
         method: "DELETE",
       });
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Failed to delete document");
+        throw new Error(data.error || "Failed to delete envelope");
       }
 
       toast({
-        title: "Document deleted",
+        title: "Envelope deleted",
         description: `"${documentTitle}" has been deleted.`,
       });
 
@@ -65,7 +65,7 @@ export function DocumentActions({ documentId, documentTitle, status }: DocumentA
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete document",
+        description: error instanceof Error ? error.message : "Failed to delete envelope",
         variant: "destructive",
       });
     } finally {
@@ -107,7 +107,7 @@ export function DocumentActions({ documentId, documentTitle, status }: DocumentA
             </DropdownMenuItem>
           )}
           <DropdownMenuItem asChild>
-            <Link href={`/api/documents/${documentId}/download`}>
+            <Link href={`/api/envelopes/${documentId}/download`}>
               <Download className="mr-2 h-4 w-4" />
               Download
             </Link>

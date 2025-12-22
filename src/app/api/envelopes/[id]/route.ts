@@ -6,7 +6,7 @@ import { eq, and } from "drizzle-orm";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -15,11 +15,13 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
+
     const [envelope] = await db
       .select()
       .from(envelopes)
       .where(
-        and(eq(envelopes.id, params.id), eq(envelopes.userId, session.user.id))
+        and(eq(envelopes.id, id), eq(envelopes.userId, session.user.id))
       );
 
     if (!envelope) {
@@ -30,14 +32,14 @@ export async function GET(
     const documents = await db
       .select()
       .from(envelopeDocuments)
-      .where(eq(envelopeDocuments.envelopeId, params.id))
+      .where(eq(envelopeDocuments.envelopeId, id))
       .orderBy(envelopeDocuments.orderIndex);
 
     // Get recipients
     const recipients = await db
       .select()
       .from(envelopeRecipients)
-      .where(eq(envelopeRecipients.envelopeId, params.id))
+      .where(eq(envelopeRecipients.envelopeId, id))
       .orderBy(envelopeRecipients.routingOrder);
 
     // Get fields for all documents
@@ -49,7 +51,7 @@ export async function GET(
           envelopeFields.envelopeDocumentId,
           db.select({ id: envelopeDocuments.id })
             .from(envelopeDocuments)
-            .where(eq(envelopeDocuments.envelopeId, params.id))
+            .where(eq(envelopeDocuments.envelopeId, id))
             .limit(1)
         )
       );
@@ -71,7 +73,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -80,6 +82,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await request.json();
     const { name, status, emailSubject, emailMessage } = body;
 
@@ -93,7 +96,7 @@ export async function PATCH(
         updatedAt: new Date(),
       })
       .where(
-        and(eq(envelopes.id, params.id), eq(envelopes.userId, session.user.id))
+        and(eq(envelopes.id, id), eq(envelopes.userId, session.user.id))
       )
       .returning();
 
@@ -113,7 +116,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -122,10 +125,12 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
+
     const [envelope] = await db
       .delete(envelopes)
       .where(
-        and(eq(envelopes.id, params.id), eq(envelopes.userId, session.user.id))
+        and(eq(envelopes.id, id), eq(envelopes.userId, session.user.id))
       )
       .returning();
 

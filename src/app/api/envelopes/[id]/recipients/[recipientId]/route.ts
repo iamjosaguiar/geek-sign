@@ -6,7 +6,7 @@ import { eq, and } from "drizzle-orm";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string; recipientId: string } }
+  { params }: { params: Promise<{ id: string; recipientId: string }> }
 ) {
   try {
     const session = await auth();
@@ -15,12 +15,14 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id, recipientId } = await params;
+
     // Verify envelope ownership
     const [envelope] = await db
       .select()
       .from(envelopes)
       .where(
-        and(eq(envelopes.id, params.id), eq(envelopes.userId, session.user.id))
+        and(eq(envelopes.id, id), eq(envelopes.userId, session.user.id))
       );
 
     if (!envelope) {
@@ -32,8 +34,8 @@ export async function GET(
       .from(envelopeRecipients)
       .where(
         and(
-          eq(envelopeRecipients.id, params.recipientId),
-          eq(envelopeRecipients.envelopeId, params.id)
+          eq(envelopeRecipients.id, recipientId),
+          eq(envelopeRecipients.envelopeId, id)
         )
       );
 
@@ -53,7 +55,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string; recipientId: string } }
+  { params }: { params: Promise<{ id: string; recipientId: string }> }
 ) {
   try {
     const session = await auth();
@@ -62,12 +64,14 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id, recipientId } = await params;
+
     // Verify envelope ownership
     const [envelope] = await db
       .select()
       .from(envelopes)
       .where(
-        and(eq(envelopes.id, params.id), eq(envelopes.userId, session.user.id))
+        and(eq(envelopes.id, id), eq(envelopes.userId, session.user.id))
       );
 
     if (!envelope) {
@@ -88,8 +92,8 @@ export async function PATCH(
       })
       .where(
         and(
-          eq(envelopeRecipients.id, params.recipientId),
-          eq(envelopeRecipients.envelopeId, params.id)
+          eq(envelopeRecipients.id, recipientId),
+          eq(envelopeRecipients.envelopeId, id)
         )
       )
       .returning();
@@ -110,7 +114,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; recipientId: string } }
+  { params }: { params: Promise<{ id: string; recipientId: string }> }
 ) {
   try {
     const session = await auth();
@@ -119,12 +123,14 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id, recipientId } = await params;
+
     // Verify envelope ownership
     const [envelope] = await db
       .select()
       .from(envelopes)
       .where(
-        and(eq(envelopes.id, params.id), eq(envelopes.userId, session.user.id))
+        and(eq(envelopes.id, id), eq(envelopes.userId, session.user.id))
       );
 
     if (!envelope) {
@@ -134,15 +140,15 @@ export async function DELETE(
     // Delete associated fields first (cascade should handle this, but being explicit)
     await db
       .delete(envelopeFields)
-      .where(eq(envelopeFields.recipientId, params.recipientId));
+      .where(eq(envelopeFields.recipientId, recipientId));
 
     // Delete recipient
     const [recipient] = await db
       .delete(envelopeRecipients)
       .where(
         and(
-          eq(envelopeRecipients.id, params.recipientId),
-          eq(envelopeRecipients.envelopeId, params.id)
+          eq(envelopeRecipients.id, recipientId),
+          eq(envelopeRecipients.envelopeId, id)
         )
       )
       .returning();

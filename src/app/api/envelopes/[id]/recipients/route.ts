@@ -6,7 +6,7 @@ import { eq, and, max } from "drizzle-orm";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -15,12 +15,14 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
+
     // Verify envelope ownership
     const [envelope] = await db
       .select()
       .from(envelopes)
       .where(
-        and(eq(envelopes.id, params.id), eq(envelopes.userId, session.user.id))
+        and(eq(envelopes.id, id), eq(envelopes.userId, session.user.id))
       );
 
     if (!envelope) {
@@ -30,7 +32,7 @@ export async function GET(
     const recipients = await db
       .select()
       .from(envelopeRecipients)
-      .where(eq(envelopeRecipients.envelopeId, params.id))
+      .where(eq(envelopeRecipients.envelopeId, id))
       .orderBy(envelopeRecipients.routingOrder);
 
     return NextResponse.json({ recipients });
@@ -45,7 +47,7 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -54,12 +56,14 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
+
     // Verify envelope ownership
     const [envelope] = await db
       .select()
       .from(envelopes)
       .where(
-        and(eq(envelopes.id, params.id), eq(envelopes.userId, session.user.id))
+        and(eq(envelopes.id, id), eq(envelopes.userId, session.user.id))
       );
 
     if (!envelope) {
@@ -74,7 +78,7 @@ export async function POST(
       // Delete all existing recipients
       await db
         .delete(envelopeRecipients)
-        .where(eq(envelopeRecipients.envelopeId, params.id));
+        .where(eq(envelopeRecipients.envelopeId, id));
 
       // Insert new recipients
       if (body.recipients.length > 0) {
@@ -82,7 +86,7 @@ export async function POST(
           .insert(envelopeRecipients)
           .values(
             body.recipients.map((r: any) => ({
-              envelopeId: params.id,
+              envelopeId: id,
               email: r.email.trim(),
               name: r.name?.trim() || null,
               routingOrder: r.routingOrder || 1,
@@ -111,7 +115,7 @@ export async function POST(
       const [result] = await db
         .select({ maxOrder: max(envelopeRecipients.routingOrder) })
         .from(envelopeRecipients)
-        .where(eq(envelopeRecipients.envelopeId, params.id));
+        .where(eq(envelopeRecipients.envelopeId, id));
 
       finalRoutingOrder = (result?.maxOrder ?? 0) + 1;
     }
@@ -119,7 +123,7 @@ export async function POST(
     const [recipient] = await db
       .insert(envelopeRecipients)
       .values({
-        envelopeId: params.id,
+        envelopeId: id,
         email: email.trim(),
         name: name?.trim() || null,
         routingOrder: finalRoutingOrder,

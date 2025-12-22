@@ -9,7 +9,7 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://sign.houseofgeeks.on
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -17,6 +17,8 @@ export async function POST(
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const { id } = await params;
 
     // Get user info for email
     const [user] = await db
@@ -33,7 +35,7 @@ export async function POST(
       .select()
       .from(envelopes)
       .where(
-        and(eq(envelopes.id, params.id), eq(envelopes.userId, session.user.id))
+        and(eq(envelopes.id, id), eq(envelopes.userId, session.user.id))
       );
 
     if (!envelope) {
@@ -53,7 +55,7 @@ export async function POST(
       .from(envelopeRecipients)
       .where(
         and(
-          eq(envelopeRecipients.envelopeId, params.id),
+          eq(envelopeRecipients.envelopeId, id),
           eq(envelopeRecipients.routingOrder, envelope.currentRoutingOrder)
         )
       );
@@ -92,7 +94,7 @@ export async function POST(
     const failedEmails = emailResults.length - successfulEmails;
 
     if (failedEmails > 0) {
-      console.warn(`${failedEmails} emails failed to send for envelope ${params.id}`);
+      console.warn(`${failedEmails} emails failed to send for envelope ${id}`);
     }
 
     return NextResponse.json({

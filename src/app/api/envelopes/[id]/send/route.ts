@@ -19,7 +19,7 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://sign.houseofgeeks.on
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -27,6 +27,8 @@ export async function POST(
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const { id } = await params;
 
     // Get user info for email
     const [user] = await db
@@ -43,7 +45,7 @@ export async function POST(
       .select()
       .from(envelopes)
       .where(
-        and(eq(envelopes.id, params.id), eq(envelopes.userId, session.user.id))
+        and(eq(envelopes.id, id), eq(envelopes.userId, session.user.id))
       );
 
     if (!envelope) {
@@ -54,7 +56,7 @@ export async function POST(
     const documents = await db
       .select()
       .from(envelopeDocuments)
-      .where(eq(envelopeDocuments.envelopeId, params.id));
+      .where(eq(envelopeDocuments.envelopeId, id));
 
     if (documents.length === 0) {
       return NextResponse.json(
@@ -67,7 +69,7 @@ export async function POST(
     const recipients = await db
       .select()
       .from(envelopeRecipients)
-      .where(eq(envelopeRecipients.envelopeId, params.id))
+      .where(eq(envelopeRecipients.envelopeId, id))
       .orderBy(envelopeRecipients.routingOrder);
 
     if (recipients.length === 0) {
@@ -103,12 +105,12 @@ export async function POST(
         currentRoutingOrder: 1, // Start with first routing order
         updatedAt: new Date(),
       })
-      .where(eq(envelopes.id, params.id))
+      .where(eq(envelopes.id, id))
       .returning();
 
     // Log the send action
     await db.insert(auditLogs).values({
-      envelopeId: params.id,
+      envelopeId: id,
       action: "envelope_sent",
       details: {
         recipientCount: recipients.length,
@@ -172,7 +174,7 @@ export async function POST(
     const failedEmails = emailResults.length - successfulEmails;
 
     if (failedEmails > 0) {
-      console.warn(`${failedEmails} emails failed to send for envelope ${params.id}`);
+      console.warn(`${failedEmails} emails failed to send for envelope ${id}`);
     }
 
     return NextResponse.json({

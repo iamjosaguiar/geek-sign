@@ -6,7 +6,7 @@ import { eq, and } from "drizzle-orm";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string; fieldId: string } }
+  { params }: { params: Promise<{ id: string; fieldId: string }> }
 ) {
   try {
     const session = await auth();
@@ -15,12 +15,14 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id, fieldId } = await params;
+
     // Verify envelope ownership
     const [envelope] = await db
       .select()
       .from(envelopes)
       .where(
-        and(eq(envelopes.id, params.id), eq(envelopes.userId, session.user.id))
+        and(eq(envelopes.id, id), eq(envelopes.userId, session.user.id))
       );
 
     if (!envelope) {
@@ -50,8 +52,8 @@ export async function GET(
       )
       .where(
         and(
-          eq(envelopeFields.id, params.fieldId),
-          eq(envelopeDocuments.envelopeId, params.id)
+          eq(envelopeFields.id, fieldId),
+          eq(envelopeDocuments.envelopeId, id)
         )
       );
 
@@ -71,7 +73,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string; fieldId: string } }
+  { params }: { params: Promise<{ id: string; fieldId: string }> }
 ) {
   try {
     const session = await auth();
@@ -80,12 +82,14 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id, fieldId } = await params;
+
     // Verify envelope ownership
     const [envelope] = await db
       .select()
       .from(envelopes)
       .where(
-        and(eq(envelopes.id, params.id), eq(envelopes.userId, session.user.id))
+        and(eq(envelopes.id, id), eq(envelopes.userId, session.user.id))
       );
 
     if (!envelope) {
@@ -105,8 +109,8 @@ export async function PATCH(
       )
       .where(
         and(
-          eq(envelopeFields.id, params.fieldId),
-          eq(envelopeDocuments.envelopeId, params.id)
+          eq(envelopeFields.id, fieldId),
+          eq(envelopeDocuments.envelopeId, id)
         )
       );
 
@@ -126,7 +130,7 @@ export async function PATCH(
         ...(required !== undefined && { required }),
         ...(value !== undefined && { value }),
       })
-      .where(eq(envelopeFields.id, params.fieldId))
+      .where(eq(envelopeFields.id, fieldId))
       .returning();
 
     return NextResponse.json({ field });
@@ -141,7 +145,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; fieldId: string } }
+  { params }: { params: Promise<{ id: string; fieldId: string }> }
 ) {
   try {
     const session = await auth();
@@ -150,12 +154,14 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id, fieldId } = await params;
+
     // Verify envelope ownership
     const [envelope] = await db
       .select()
       .from(envelopes)
       .where(
-        and(eq(envelopes.id, params.id), eq(envelopes.userId, session.user.id))
+        and(eq(envelopes.id, id), eq(envelopes.userId, session.user.id))
       );
 
     if (!envelope) {
@@ -172,8 +178,8 @@ export async function DELETE(
       )
       .where(
         and(
-          eq(envelopeFields.id, params.fieldId),
-          eq(envelopeDocuments.envelopeId, params.id)
+          eq(envelopeFields.id, fieldId),
+          eq(envelopeDocuments.envelopeId, id)
         )
       );
 
@@ -183,7 +189,7 @@ export async function DELETE(
 
     const [field] = await db
       .delete(envelopeFields)
-      .where(eq(envelopeFields.id, params.fieldId))
+      .where(eq(envelopeFields.id, fieldId))
       .returning();
 
     return NextResponse.json({ success: true });
