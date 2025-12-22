@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Trash2, Save } from "lucide-react";
 
-type StepType = "send_document" | "await_signature" | "approval_gate" | "conditional_branch" | "wait";
+type StepType = "send_document" | "await_signature" | "approval_gate" | "wait";
 
 interface WorkflowStep {
   id: string;
@@ -46,7 +46,6 @@ export default function NewWorkflowPage() {
       send_document: "Send Document",
       await_signature: "Await Signature",
       approval_gate: "Approval Gate",
-      conditional_branch: "Conditional Branch",
       wait: "Wait",
     };
     return names[type];
@@ -57,7 +56,6 @@ export default function NewWorkflowPage() {
       send_document: { recipients: [] },
       await_signature: { timeout: 86400 },
       approval_gate: { approvers: [], mode: "all" },
-      conditional_branch: { condition: "", thenStep: "", elseStep: "" },
       wait: { duration: 3600 },
     };
     return configs[type];
@@ -109,7 +107,6 @@ export default function NewWorkflowPage() {
     { type: "send_document", label: "Send Document", description: "Send document to recipients" },
     { type: "await_signature", label: "Await Signature", description: "Wait for signatures to complete" },
     { type: "approval_gate", label: "Approval Gate", description: "Require approval before proceeding" },
-    { type: "conditional_branch", label: "Conditional Branch", description: "Branch based on conditions" },
     { type: "wait", label: "Wait", description: "Wait for a specified duration" },
   ];
 
@@ -391,79 +388,6 @@ export default function NewWorkflowPage() {
                             min="0"
                             placeholder="Leave empty for no timeout"
                           />
-                        </div>
-                      </div>
-                    )}
-
-                    {step.type === "conditional_branch" && (
-                      <div className="space-y-3">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Condition Expression
-                          </label>
-                          <input
-                            type="text"
-                            value={step.config.condition}
-                            onChange={(e) =>
-                              updateStep(index, "config", {
-                                ...step.config,
-                                condition: e.target.value,
-                              })
-                            }
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg font-mono"
-                            placeholder='e.g., field.amount > 1000 OR field.type == "urgent"'
-                          />
-                          <p className="text-xs text-gray-500 mt-1">
-                            Use field.name for field values, operators: ==, !=, &gt;, &lt;, AND, OR
-                          </p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Then Go To Step
-                          </label>
-                          <select
-                            value={step.config.thenStep}
-                            onChange={(e) =>
-                              updateStep(index, "config", {
-                                ...step.config,
-                                thenStep: e.target.value,
-                              })
-                            }
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
-                          >
-                            <option value="">Select step...</option>
-                            {steps
-                              .filter((s, i) => i !== index)
-                              .map((s, i) => (
-                                <option key={s.id} value={s.id}>
-                                  {s.name || `Step ${i + 1}`}
-                                </option>
-                              ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Else Go To Step
-                          </label>
-                          <select
-                            value={step.config.elseStep}
-                            onChange={(e) =>
-                              updateStep(index, "config", {
-                                ...step.config,
-                                elseStep: e.target.value,
-                              })
-                            }
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
-                          >
-                            <option value="">Select step...</option>
-                            {steps
-                              .filter((s, i) => i !== index)
-                              .map((s, i) => (
-                                <option key={s.id} value={s.id}>
-                                  {s.name || `Step ${i + 1}`}
-                                </option>
-                              ))}
-                          </select>
                         </div>
                       </div>
                     )}
