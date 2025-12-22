@@ -417,50 +417,81 @@ export default function WorkflowDetailPage() {
                     {step.type === "await_signature" && (
                       <div className="space-y-3">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
                             Timeout
                           </label>
-                          <div className="flex gap-2">
-                            <input
-                              type="number"
-                              value={step.config.timeoutValue || Math.floor(step.config.timeout / 3600)}
-                              onChange={(e) => {
-                                const value = parseInt(e.target.value) || 1;
-                                const unit = step.config.timeoutUnit || "hours";
-                                const multiplier = unit === "days" ? 86400 : unit === "hours" ? 3600 : 60;
-                                updateStep(index, "config", {
-                                  ...step.config,
-                                  timeout: value * multiplier,
-                                  timeoutValue: value,
-                                  timeoutUnit: unit,
-                                });
-                              }}
-                              className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg"
-                              min="1"
-                              placeholder="24"
-                            />
-                            <select
-                              value={step.config.timeoutUnit || "hours"}
-                              onChange={(e) => {
-                                const value = step.config.timeoutValue || Math.floor(step.config.timeout / 3600);
-                                const unit = e.target.value;
-                                const multiplier = unit === "days" ? 86400 : unit === "hours" ? 3600 : 60;
-                                updateStep(index, "config", {
-                                  ...step.config,
-                                  timeout: value * multiplier,
-                                  timeoutValue: value,
-                                  timeoutUnit: unit,
-                                });
-                              }}
-                              className="px-3 py-2 text-sm border border-gray-300 rounded-lg"
-                            >
-                              <option value="minutes">Minutes</option>
-                              <option value="hours">Hours</option>
-                              <option value="days">Days</option>
-                            </select>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <label className="block text-xs text-gray-600 mb-1">Days</label>
+                              <input
+                                type="number"
+                                value={step.config.timeoutDays || Math.floor(step.config.timeout / 86400)}
+                                onChange={(e) => {
+                                  const days = parseInt(e.target.value) || 0;
+                                  const hours = step.config.timeoutHours || 0;
+                                  const minutes = step.config.timeoutMinutes || 0;
+                                  updateStep(index, "config", {
+                                    ...step.config,
+                                    timeout: days * 86400 + hours * 3600 + minutes * 60,
+                                    timeoutDays: days,
+                                    timeoutHours: hours,
+                                    timeoutMinutes: minutes,
+                                  });
+                                }}
+                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                                min="0"
+                                placeholder="0"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-600 mb-1">Hours</label>
+                              <input
+                                type="number"
+                                value={step.config.timeoutHours || Math.floor((step.config.timeout % 86400) / 3600)}
+                                onChange={(e) => {
+                                  const days = step.config.timeoutDays || 0;
+                                  const hours = parseInt(e.target.value) || 0;
+                                  const minutes = step.config.timeoutMinutes || 0;
+                                  updateStep(index, "config", {
+                                    ...step.config,
+                                    timeout: days * 86400 + hours * 3600 + minutes * 60,
+                                    timeoutDays: days,
+                                    timeoutHours: hours,
+                                    timeoutMinutes: minutes,
+                                  });
+                                }}
+                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                                min="0"
+                                max="23"
+                                placeholder="24"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-600 mb-1">Minutes</label>
+                              <input
+                                type="number"
+                                value={step.config.timeoutMinutes || Math.floor((step.config.timeout % 3600) / 60)}
+                                onChange={(e) => {
+                                  const days = step.config.timeoutDays || 0;
+                                  const hours = step.config.timeoutHours || 0;
+                                  const minutes = parseInt(e.target.value) || 0;
+                                  updateStep(index, "config", {
+                                    ...step.config,
+                                    timeout: days * 86400 + hours * 3600 + minutes * 60,
+                                    timeoutDays: days,
+                                    timeoutHours: hours,
+                                    timeoutMinutes: minutes,
+                                  });
+                                }}
+                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                                min="0"
+                                max="59"
+                                placeholder="0"
+                              />
+                            </div>
                           </div>
                           <p className="text-xs text-gray-500 mt-1">
-                            Time to wait for signatures (default: 24 hours)
+                            Time to wait for signatures (default: 1 day)
                           </p>
                         </div>
                       </div>
@@ -536,106 +567,194 @@ export default function WorkflowDetailPage() {
                           </select>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
                             Timeout (optional)
                           </label>
-                          <div className="flex gap-2">
-                            <input
-                              type="number"
-                              value={step.config.timeoutValue || (step.config.timeout ? Math.floor(step.config.timeout / 3600) : "")}
-                              onChange={(e) => {
-                                if (!e.target.value) {
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <label className="block text-xs text-gray-600 mb-1">Days</label>
+                              <input
+                                type="number"
+                                value={step.config.timeoutDays !== undefined ? step.config.timeoutDays : (step.config.timeout ? Math.floor(step.config.timeout / 86400) : "")}
+                                onChange={(e) => {
+                                  const days = e.target.value ? parseInt(e.target.value) : 0;
+                                  const hours = step.config.timeoutHours || 0;
+                                  const minutes = step.config.timeoutMinutes || 0;
+                                  const total = days * 86400 + hours * 3600 + minutes * 60;
                                   updateStep(index, "config", {
                                     ...step.config,
-                                    timeout: null,
-                                    timeoutValue: "",
-                                    timeoutUnit: "hours",
+                                    timeout: total || null,
+                                    timeoutDays: days,
+                                    timeoutHours: hours,
+                                    timeoutMinutes: minutes,
                                   });
-                                  return;
-                                }
-                                const value = parseInt(e.target.value) || 1;
-                                const unit = step.config.timeoutUnit || "hours";
-                                const multiplier = unit === "days" ? 86400 : unit === "hours" ? 3600 : 60;
-                                updateStep(index, "config", {
-                                  ...step.config,
-                                  timeout: value * multiplier,
-                                  timeoutValue: value,
-                                  timeoutUnit: unit,
-                                });
-                              }}
-                              className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg"
-                              min="1"
-                              placeholder="Leave empty for no timeout"
-                            />
-                            <select
-                              value={step.config.timeoutUnit || "hours"}
-                              onChange={(e) => {
-                                const value = step.config.timeoutValue || (step.config.timeout ? Math.floor(step.config.timeout / 3600) : 1);
-                                if (!value) return;
-                                const unit = e.target.value;
-                                const multiplier = unit === "days" ? 86400 : unit === "hours" ? 3600 : 60;
-                                updateStep(index, "config", {
-                                  ...step.config,
-                                  timeout: value * multiplier,
-                                  timeoutValue: value,
-                                  timeoutUnit: unit,
-                                });
-                              }}
-                              className="px-3 py-2 text-sm border border-gray-300 rounded-lg"
-                              disabled={!step.config.timeoutValue && !step.config.timeout}
-                            >
-                              <option value="minutes">Minutes</option>
-                              <option value="hours">Hours</option>
-                              <option value="days">Days</option>
-                            </select>
+                                }}
+                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                                min="0"
+                                placeholder="0"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-600 mb-1">Hours</label>
+                              <input
+                                type="number"
+                                value={step.config.timeoutHours !== undefined ? step.config.timeoutHours : (step.config.timeout ? Math.floor((step.config.timeout % 86400) / 3600) : "")}
+                                onChange={(e) => {
+                                  const days = step.config.timeoutDays || 0;
+                                  const hours = e.target.value ? parseInt(e.target.value) : 0;
+                                  const minutes = step.config.timeoutMinutes || 0;
+                                  const total = days * 86400 + hours * 3600 + minutes * 60;
+                                  updateStep(index, "config", {
+                                    ...step.config,
+                                    timeout: total || null,
+                                    timeoutDays: days,
+                                    timeoutHours: hours,
+                                    timeoutMinutes: minutes,
+                                  });
+                                }}
+                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                                min="0"
+                                max="23"
+                                placeholder="0"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-600 mb-1">Minutes</label>
+                              <input
+                                type="number"
+                                value={step.config.timeoutMinutes !== undefined ? step.config.timeoutMinutes : (step.config.timeout ? Math.floor((step.config.timeout % 3600) / 60) : "")}
+                                onChange={(e) => {
+                                  const days = step.config.timeoutDays || 0;
+                                  const hours = step.config.timeoutHours || 0;
+                                  const minutes = e.target.value ? parseInt(e.target.value) : 0;
+                                  const total = days * 86400 + hours * 3600 + minutes * 60;
+                                  updateStep(index, "config", {
+                                    ...step.config,
+                                    timeout: total || null,
+                                    timeoutDays: days,
+                                    timeoutHours: hours,
+                                    timeoutMinutes: minutes,
+                                  });
+                                }}
+                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                                min="0"
+                                max="59"
+                                placeholder="0"
+                              />
+                            </div>
                           </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Leave all empty for no timeout
+                          </p>
                         </div>
                       </div>
                     )}
 
                     {step.type === "wait" && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
                           Wait Duration
                         </label>
-                        <div className="flex gap-2">
-                          <input
-                            type="number"
-                            value={step.config.durationValue || Math.floor(step.config.duration / 60)}
-                            onChange={(e) => {
-                              const value = parseInt(e.target.value) || 1;
-                              const unit = step.config.durationUnit || "minutes";
-                              const multiplier = unit === "days" ? 86400 : unit === "hours" ? 3600 : 60;
-                              updateStep(index, "config", {
-                                ...step.config,
-                                duration: value * multiplier,
-                                durationValue: value,
-                                durationUnit: unit,
-                              });
-                            }}
-                            className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg"
-                            min="1"
-                            placeholder="60"
-                          />
-                          <select
-                            value={step.config.durationUnit || "minutes"}
-                            onChange={(e) => {
-                              const value = step.config.durationValue || Math.floor(step.config.duration / 60);
-                              const unit = e.target.value;
-                              const multiplier = unit === "days" ? 86400 : unit === "hours" ? 3600 : 60;
-                              updateStep(index, "config", {
-                                ...step.config,
-                                duration: value * multiplier,
-                                durationValue: value,
-                                durationUnit: unit,
-                              });
-                            }}
-                            className="px-3 py-2 text-sm border border-gray-300 rounded-lg"
-                          >
-                            <option value="minutes">Minutes</option>
-                            <option value="hours">Hours</option>
-                            <option value="days">Days</option>
-                          </select>
+                        <div className="grid grid-cols-4 gap-2">
+                          <div>
+                            <label className="block text-xs text-gray-600 mb-1">Days</label>
+                            <input
+                              type="number"
+                              value={step.config.durationDays || Math.floor(step.config.duration / 86400)}
+                              onChange={(e) => {
+                                const days = parseInt(e.target.value) || 0;
+                                const hours = step.config.durationHours || 0;
+                                const minutes = step.config.durationMinutes || 0;
+                                const seconds = step.config.durationSeconds || 0;
+                                updateStep(index, "config", {
+                                  ...step.config,
+                                  duration: days * 86400 + hours * 3600 + minutes * 60 + seconds,
+                                  durationDays: days,
+                                  durationHours: hours,
+                                  durationMinutes: minutes,
+                                  durationSeconds: seconds,
+                                });
+                              }}
+                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                              min="0"
+                              placeholder="0"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-600 mb-1">Hours</label>
+                            <input
+                              type="number"
+                              value={step.config.durationHours || Math.floor((step.config.duration % 86400) / 3600)}
+                              onChange={(e) => {
+                                const days = step.config.durationDays || 0;
+                                const hours = parseInt(e.target.value) || 0;
+                                const minutes = step.config.durationMinutes || 0;
+                                const seconds = step.config.durationSeconds || 0;
+                                updateStep(index, "config", {
+                                  ...step.config,
+                                  duration: days * 86400 + hours * 3600 + minutes * 60 + seconds,
+                                  durationDays: days,
+                                  durationHours: hours,
+                                  durationMinutes: minutes,
+                                  durationSeconds: seconds,
+                                });
+                              }}
+                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                              min="0"
+                              max="23"
+                              placeholder="0"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-600 mb-1">Minutes</label>
+                            <input
+                              type="number"
+                              value={step.config.durationMinutes || Math.floor((step.config.duration % 3600) / 60)}
+                              onChange={(e) => {
+                                const days = step.config.durationDays || 0;
+                                const hours = step.config.durationHours || 0;
+                                const minutes = parseInt(e.target.value) || 0;
+                                const seconds = step.config.durationSeconds || 0;
+                                updateStep(index, "config", {
+                                  ...step.config,
+                                  duration: days * 86400 + hours * 3600 + minutes * 60 + seconds,
+                                  durationDays: days,
+                                  durationHours: hours,
+                                  durationMinutes: minutes,
+                                  durationSeconds: seconds,
+                                });
+                              }}
+                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                              min="0"
+                              max="59"
+                              placeholder="0"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-600 mb-1">Seconds</label>
+                            <input
+                              type="number"
+                              value={step.config.durationSeconds || (step.config.duration % 60)}
+                              onChange={(e) => {
+                                const days = step.config.durationDays || 0;
+                                const hours = step.config.durationHours || 0;
+                                const minutes = step.config.durationMinutes || 0;
+                                const seconds = parseInt(e.target.value) || 0;
+                                updateStep(index, "config", {
+                                  ...step.config,
+                                  duration: days * 86400 + hours * 3600 + minutes * 60 + seconds,
+                                  durationDays: days,
+                                  durationHours: hours,
+                                  durationMinutes: minutes,
+                                  durationSeconds: seconds,
+                                });
+                              }}
+                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                              min="0"
+                              max="59"
+                              placeholder="0"
+                            />
+                          </div>
                         </div>
                         <p className="text-xs text-gray-500 mt-1">
                           Time to wait before proceeding to next step
