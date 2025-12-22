@@ -67,6 +67,38 @@ export async function POST(
     }
 
     const body = await request.json();
+
+    // Support bulk operations (array of recipients) OR single recipient
+    if (body.recipients && Array.isArray(body.recipients)) {
+      // Bulk operation: replace all recipients
+      // Delete all existing recipients
+      await db
+        .delete(envelopeRecipients)
+        .where(eq(envelopeRecipients.envelopeId, params.id));
+
+      // Insert new recipients
+      if (body.recipients.length > 0) {
+        const newRecipients = await db
+          .insert(envelopeRecipients)
+          .values(
+            body.recipients.map((r: any) => ({
+              envelopeId: params.id,
+              email: r.email.trim(),
+              name: r.name?.trim() || null,
+              routingOrder: r.routingOrder || 1,
+              action: r.action || "needs_to_sign",
+              status: "pending",
+            }))
+          )
+          .returning();
+
+        return NextResponse.json({ recipients: newRecipients });
+      }
+
+      return NextResponse.json({ recipients: [] });
+    }
+
+    // Single recipient creation (backward compatibility)
     const { email, name, routingOrder, action } = body;
 
     if (!email) {
