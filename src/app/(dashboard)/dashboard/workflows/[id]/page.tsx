@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, Save, Play, Trash2, Plus, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { ExecuteOnDocumentButton } from "@/components/workflows/execute-on-document-button";
 
 type StepType = "send_document" | "await_signature" | "approval_gate" | "wait";
 
@@ -581,6 +582,12 @@ export default function WorkflowDetailPage() {
             Delete Workflow
           </button>
           <div className="flex items-center gap-3">
+            <ExecuteOnDocumentButton
+              workflowId={workflowId}
+              workflowName={name}
+              workflowStatus={status}
+              variant="outline"
+            />
             <button
               onClick={() => router.push("/dashboard/workflows")}
               className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
