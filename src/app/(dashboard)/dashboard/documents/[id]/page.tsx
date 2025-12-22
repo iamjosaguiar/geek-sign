@@ -24,6 +24,7 @@ import { formatDate, formatDistanceToNow } from "@/lib/utils";
 import { SendDocumentButton } from "@/components/documents/send-document-button";
 import { ResendEmailsButton } from "@/components/documents/resend-emails-button";
 import { DownloadButton } from "@/components/documents/download-button";
+import { DeleteDocumentButton } from "@/components/documents/delete-document-button";
 
 // Dynamically import PDF preview to avoid SSR issues
 const DocumentPreview = dynamic(
@@ -342,10 +343,10 @@ export default async function DocumentPage({ params }: DocumentPageProps) {
               <CardTitle className="text-destructive">Danger Zone</CardTitle>
             </CardHeader>
             <CardContent>
-              <Button variant="destructive" className="w-full">
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete Document
-              </Button>
+              <DeleteDocumentButton
+                documentId={document.id}
+                documentTitle={document.title}
+              />
             </CardContent>
           </Card>
         </div>
