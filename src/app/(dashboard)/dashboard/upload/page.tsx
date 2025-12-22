@@ -98,8 +98,8 @@ export default function UploadPage() {
       formData.append("file", file);
       formData.append("title", title.trim());
 
-      // Upload file via API
-      const response = await fetch("/api/documents/upload", {
+      // Upload file via API (using new envelope system)
+      const response = await fetch("/api/envelopes/upload", {
         method: "POST",
         body: formData,
       });
@@ -109,15 +109,15 @@ export default function UploadPage() {
         throw new Error(error.message || "Upload failed");
       }
 
-      const { document } = await response.json();
+      const { envelope } = await response.json();
 
       toast({
         title: "Document uploaded",
         description: "Your document has been uploaded successfully.",
       });
 
-      // Redirect to document editor
-      router.push(`/dashboard/documents/${document.id}/edit`);
+      // Redirect to document editor (works with envelopes during migration)
+      router.push(`/dashboard/documents/${envelope.id}/edit`);
     } catch (error) {
       console.error("Upload error:", error);
       toast({
