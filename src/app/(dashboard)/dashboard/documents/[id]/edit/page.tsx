@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, use } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
@@ -54,7 +54,7 @@ const PdfDocument = dynamic(
 );
 
 interface EditorPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 interface DocumentData {
@@ -101,6 +101,7 @@ const fieldTypes = [
 ];
 
 export default function DocumentEditorPage({ params }: EditorPageProps) {
+  const { id: documentId } = use(params);
   const [document, setDocument] = useState<DocumentData | null>(null);
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [fields, setFields] = useState<DocumentField[]>([]);
@@ -160,7 +161,7 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
       }
 
       try {
-        const response = await fetch(`/api/documents/${params.id}`);
+        const response = await fetch(`/api/documents/${documentId}`);
         if (!response.ok) {
           router.push("/dashboard/documents");
           return;
@@ -195,7 +196,7 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
     };
 
     fetchDocument();
-  }, [params.id, router, session, status]);
+  }, [documentId, router, session, status]);
 
   const addRecipient = async () => {
     if (!newRecipientEmail.trim()) {
@@ -211,7 +212,7 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
     const tempId = `temp-${Date.now()}`;
     const newRecipient: Recipient = {
       id: tempId,
-      documentId: params.id,
+      documentId: documentId,
       email: newRecipientEmail.trim(),
       name: newRecipientName.trim() || null,
       status: "pending",
@@ -226,7 +227,7 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
     setSelectedRecipientId(tempId);
 
     try {
-      const response = await fetch(`/api/documents/${params.id}/recipients`, {
+      const response = await fetch(`/api/documents/${documentId}/recipients`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -271,7 +272,7 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
     }
 
     try {
-      const response = await fetch(`/api/documents/${params.id}/recipients/${id}`, {
+      const response = await fetch(`/api/documents/${documentId}/recipients/${id}`, {
         method: "DELETE",
       });
 
@@ -344,7 +345,7 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
     const tempId = `temp-${Date.now()}`;
     const newField: DocumentField = {
       id: tempId,
-      documentId: params.id,
+      documentId: documentId,
       recipientId,
       type: selectedFieldType,
       page: currentPage,
@@ -360,7 +361,7 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
     setSelectedFieldId(tempId);
 
     try {
-      const response = await fetch(`/api/documents/${params.id}/fields`, {
+      const response = await fetch(`/api/documents/${documentId}/fields`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -399,7 +400,7 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
     if (id.startsWith("temp-")) return;
 
     try {
-      await fetch(`/api/documents/${params.id}/fields/${id}`, {
+      await fetch(`/api/documents/${documentId}/fields/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -410,7 +411,7 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
     } catch (error) {
       console.error("Failed to update field position:", error);
     }
-  }, [params.id]);
+  }, [documentId]);
 
   const updateFieldSize = useCallback(async (id: string, width: number, height: number) => {
     // Optimistic update
@@ -422,7 +423,7 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
     if (id.startsWith("temp-")) return;
 
     try {
-      await fetch(`/api/documents/${params.id}/fields/${id}`, {
+      await fetch(`/api/documents/${documentId}/fields/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -433,7 +434,7 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
     } catch (error) {
       console.error("Failed to update field size:", error);
     }
-  }, [params.id]);
+  }, [documentId]);
 
   const removeField = async (id: string) => {
     const fieldToRemove = fields.find(f => f.id === id);
@@ -442,7 +443,7 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
     if (id.startsWith("temp-")) return;
 
     try {
-      const response = await fetch(`/api/documents/${params.id}/fields/${id}`, {
+      const response = await fetch(`/api/documents/${documentId}/fields/${id}`, {
         method: "DELETE",
       });
 
@@ -481,7 +482,7 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
     setIsSending(true);
 
     try {
-      const response = await fetch(`/api/documents/${params.id}/send`, {
+      const response = await fetch(`/api/documents/${documentId}/send`, {
         method: "POST",
       });
 
@@ -496,7 +497,7 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
         description: `${data.emailsSent || recipients.length} invitation email(s) sent successfully.`,
       });
 
-      router.push(`/dashboard/documents/${params.id}`);
+      router.push(`/dashboard/documents/${documentId}`);
     } catch (error) {
       toast({
         title: "Error",
@@ -591,7 +592,7 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
       <div className="flex items-center justify-between border-b px-4 py-3 bg-background">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" asChild>
-            <Link href={`/dashboard/documents/${params.id}`}>
+            <Link href={`/dashboard/documents/${documentId}`}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back
             </Link>
