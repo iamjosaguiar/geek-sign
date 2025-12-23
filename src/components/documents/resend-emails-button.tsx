@@ -16,7 +16,7 @@ export function ResendEmailsButton({ documentId }: ResendEmailsButtonProps) {
     setIsSending(true);
 
     try {
-      const response = await fetch(`/api/documents/${documentId}/resend`, {
+      const response = await fetch(`/api/envelopes/${documentId}/resend`, {
         method: "POST",
       });
 

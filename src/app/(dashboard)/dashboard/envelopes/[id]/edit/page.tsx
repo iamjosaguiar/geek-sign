@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { EnvelopeEditor } from "./EnvelopeEditor";
 
 interface EnvelopeEditPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function EnvelopeEditPage({ params }: EnvelopeEditPageProps) {
@@ -15,11 +15,13 @@ export default async function EnvelopeEditPage({ params }: EnvelopeEditPageProps
     return null;
   }
 
+  const { id } = await params;
+
   // Fetch envelope
   const [envelope] = await db
     .select()
     .from(envelopes)
-    .where(and(eq(envelopes.id, params.id), eq(envelopes.userId, session.user.id)))
+    .where(and(eq(envelopes.id, id), eq(envelopes.userId, session.user.id)))
     .limit(1);
 
   if (!envelope) {
@@ -30,7 +32,7 @@ export default async function EnvelopeEditPage({ params }: EnvelopeEditPageProps
   const recipients = await db
     .select()
     .from(envelopeRecipients)
-    .where(eq(envelopeRecipients.envelopeId, params.id))
+    .where(eq(envelopeRecipients.envelopeId, id))
     .orderBy(envelopeRecipients.routingOrder);
 
   return (

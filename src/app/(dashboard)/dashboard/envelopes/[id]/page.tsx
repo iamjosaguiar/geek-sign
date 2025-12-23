@@ -54,7 +54,7 @@ const SignedDocumentPreview = dynamic(
 );
 
 interface EnvelopePageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function EnvelopePage({ params }: EnvelopePageProps) {
@@ -64,10 +64,12 @@ export default async function EnvelopePage({ params }: EnvelopePageProps) {
     return null;
   }
 
+  const { id } = await params;
+
   const [envelope] = await db
     .select()
     .from(envelopes)
-    .where(and(eq(envelopes.id, params.id), eq(envelopes.userId, session.user.id)))
+    .where(and(eq(envelopes.id, id), eq(envelopes.userId, session.user.id)))
     .limit(1);
 
   if (!envelope) {
@@ -77,13 +79,13 @@ export default async function EnvelopePage({ params }: EnvelopePageProps) {
   const documents = await db
     .select()
     .from(envelopeDocuments)
-    .where(eq(envelopeDocuments.envelopeId, params.id))
+    .where(eq(envelopeDocuments.envelopeId, id))
     .orderBy(envelopeDocuments.orderIndex);
 
   const recipients = await db
     .select()
     .from(envelopeRecipients)
-    .where(eq(envelopeRecipients.envelopeId, params.id))
+    .where(eq(envelopeRecipients.envelopeId, id))
     .orderBy(envelopeRecipients.routingOrder);
 
   // Get all fields for all documents
@@ -97,7 +99,7 @@ export default async function EnvelopePage({ params }: EnvelopePageProps) {
   const logs = await db
     .select()
     .from(auditLogs)
-    .where(eq(auditLogs.envelopeId, params.id))
+    .where(eq(auditLogs.envelopeId, id))
     .orderBy(desc(auditLogs.createdAt))
     .limit(10);
 
@@ -224,12 +226,12 @@ export default async function EnvelopePage({ params }: EnvelopePageProps) {
                     fields={previewFields.map(f => ({
                       id: f.id,
                       type: f.type,
-                      page: f.page,
-                      xPosition: f.xPosition,
-                      yPosition: f.yPosition,
-                      width: f.width,
-                      height: f.height,
-                      value: f.value,
+                      page: f.page ?? 1,
+                      xPosition: f.xPosition ?? 0,
+                      yPosition: f.yPosition ?? 0,
+                      width: f.width ?? 0,
+                      height: f.height ?? 0,
+                      value: f.value ?? null,
                       recipientId: f.recipientId,
                     }))}
                   />
