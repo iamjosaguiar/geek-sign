@@ -81,11 +81,9 @@ export async function PUT(
 
     if (file) {
       // Delete old file if exists
-      // Note: Templates now use documents JSON field, old fileUrl field may not exist
-      const templateWithFileUrl = existingTemplate as unknown as { fileUrl?: string };
-      if (templateWithFileUrl.fileUrl) {
+      if (existingTemplate.fileUrl) {
         try {
-          await del(templateWithFileUrl.fileUrl);
+          await del(existingTemplate.fileUrl);
         } catch {
           // Ignore delete errors
         }
@@ -95,16 +93,12 @@ export async function PUT(
       const blob = await put(`templates/${session.user.id}/${file.name}`, file, {
         access: "public",
       });
-      // Note: This updates the old fileUrl field for backward compatibility
-      // In the new system, this should update documents JSON instead
-      (updates as { fileUrl?: string }).fileUrl = blob.url;
+      updates.fileUrl = blob.url;
     }
 
     if (fieldsJson) {
       try {
-        // Note: Templates now use documents JSON with embedded fields
-        // This updates the old fields property for backward compatibility
-        (updates as { fields?: unknown }).fields = JSON.parse(fieldsJson);
+        updates.fields = JSON.parse(fieldsJson);
       } catch {
         return NextResponse.json(
           { error: "Invalid fields JSON" },
@@ -156,11 +150,9 @@ export async function DELETE(
     }
 
     // Delete file from blob storage if exists
-    // Note: Templates now use documents JSON field, old fileUrl field may not exist
-    const templateWithFileUrl = template as unknown as { fileUrl?: string };
-    if (templateWithFileUrl.fileUrl) {
+    if (template.fileUrl) {
       try {
-        await del(templateWithFileUrl.fileUrl);
+        await del(template.fileUrl);
       } catch {
         // Ignore delete errors
       }

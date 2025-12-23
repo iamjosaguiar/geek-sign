@@ -29,8 +29,8 @@ const navigation = [
     icon: Upload,
   },
   {
-    name: "All Envelopes",
-    href: "/dashboard/envelopes",
+    name: "All Documents",
+    href: "/dashboard/documents",
     icon: FileText,
   },
   {

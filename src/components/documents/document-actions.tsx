@@ -47,17 +47,17 @@ export function DocumentActions({ documentId, documentTitle, status }: DocumentA
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      const response = await fetch(`/api/envelopes/${documentId}`, {
+      const response = await fetch(`/api/documents/${documentId}`, {
         method: "DELETE",
       });
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Failed to delete envelope");
+        throw new Error(data.error || "Failed to delete document");
       }
 
       toast({
-        title: "Envelope deleted",
+        title: "Document deleted",
         description: `"${documentTitle}" has been deleted.`,
       });
 
@@ -65,7 +65,7 @@ export function DocumentActions({ documentId, documentTitle, status }: DocumentA
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete envelope",
+        description: error instanceof Error ? error.message : "Failed to delete document",
         variant: "destructive",
       });
     } finally {
@@ -85,16 +85,16 @@ export function DocumentActions({ documentId, documentTitle, status }: DocumentA
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem asChild>
-            <Link href={`/dashboard/envelopes/${documentId}`}>
+            <Link href={`/dashboard/documents/${documentId}`}>
               <Eye className="mr-2 h-4 w-4" />
               View Details
             </Link>
           </DropdownMenuItem>
           {status === "draft" && (
             <DropdownMenuItem asChild>
-              <Link href={`/dashboard/envelopes/${documentId}/edit`}>
+              <Link href={`/dashboard/documents/${documentId}/edit`}>
                 <Edit className="mr-2 h-4 w-4" />
-                Edit Recipients
+                Edit Document
               </Link>
             </DropdownMenuItem>
           )}
@@ -107,7 +107,7 @@ export function DocumentActions({ documentId, documentTitle, status }: DocumentA
             </DropdownMenuItem>
           )}
           <DropdownMenuItem asChild>
-            <Link href={`/api/envelopes/${documentId}/download`}>
+            <Link href={`/api/documents/${documentId}/download`}>
               <Download className="mr-2 h-4 w-4" />
               Download
             </Link>

@@ -106,18 +106,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Note: Templates now use documents/roles JSON fields
-    // This uses old fields for backward compatibility during migration
     const [newTemplate] = await db
       .insert(templates)
       .values({
         userId: session.user.id,
         name,
         description: description || null,
-        // Type assertion for backward compatibility with old schema
-        ...(fileUrl && { fileUrl } as any),
-        ...(fields && { fields } as any),
-      } as any)
+        fileUrl,
+        fields,
+      })
       .returning();
 
     return NextResponse.json(newTemplate, { status: 201 });

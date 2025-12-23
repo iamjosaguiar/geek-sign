@@ -25,7 +25,7 @@ interface DeleteDocumentButtonProps {
 export function DeleteDocumentButton({
   documentId,
   documentTitle,
-  redirectTo = "/dashboard/envelopes",
+  redirectTo = "/dashboard/documents",
 }: DeleteDocumentButtonProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -35,17 +35,17 @@ export function DeleteDocumentButton({
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      const response = await fetch(`/api/envelopes/${documentId}`, {
+      const response = await fetch(`/api/documents/${documentId}`, {
         method: "DELETE",
       });
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Failed to delete envelope");
+        throw new Error(data.error || "Failed to delete document");
       }
 
       toast({
-        title: "Envelope deleted",
+        title: "Document deleted",
         description: `"${documentTitle}" has been deleted.`,
       });
 
@@ -55,7 +55,7 @@ export function DeleteDocumentButton({
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete envelope",
+        description: error instanceof Error ? error.message : "Failed to delete document",
         variant: "destructive",
       });
       setIsDeleting(false);
@@ -72,13 +72,13 @@ export function DeleteDocumentButton({
         disabled={isDeleting}
       >
         <Trash2 className="mr-2 h-4 w-4" />
-        Delete Envelope
+        Delete Document
       </Button>
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Envelope</AlertDialogTitle>
+            <AlertDialogTitle>Delete Document</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete &ldquo;{documentTitle}&rdquo;? This action cannot be undone.
             </AlertDialogDescription>

@@ -92,7 +92,7 @@ export function SendDocumentWithWorkflow({
     setProcessing(true);
 
     try {
-      const response = await fetch(`/api/envelopes/${documentId}/send`, {
+      const response = await fetch(`/api/documents/${documentId}/send`, {
         method: "POST",
       });
 

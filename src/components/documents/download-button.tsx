@@ -28,7 +28,7 @@ export function DownloadButton({ documentId, documentTitle, isCompleted }: Downl
     setIsDownloading(true);
 
     try {
-      const response = await fetch(`/api/envelopes/${documentId}/download`);
+      const response = await fetch(`/api/documents/${documentId}/download`);
 
       if (!response.ok) {
         const data = await response.json();
