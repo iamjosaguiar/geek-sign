@@ -53,6 +53,9 @@ import {
   Upload,
   ChevronDown,
   X,
+  Link2,
+  Copy,
+  Check,
 } from "lucide-react";
 import Link from "next/link";
 import { DraggableField, recipientColors, getFieldTypeInfo, type FieldData } from "@/components/pdf/draggable-field";
@@ -140,6 +143,9 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
   const [reminderIntervalDays, setReminderIntervalDays] = useState(3);
   const [reminderRepeatEnabled, setReminderRepeatEnabled] = useState(false);
   const [reminderRepeatDays, setReminderRepeatDays] = useState(3);
+  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
+  const [shareLinks, setShareLinks] = useState<Array<{ recipientId: string; name: string | null; email: string; url: string }>>([]);
+  const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
   const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(null);
   const [selectedFieldType, setSelectedFieldType] = useState<string>("signature");
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
@@ -569,6 +575,69 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
       });
     } finally {
       setIsSending(false);
+    }
+  };
+
+  // Activate the document and get shareable signing links WITHOUT emailing.
+  const getShareableLink = async () => {
+    if (recipients.length === 0) {
+      toast({
+        title: "No recipients",
+        description: "Please add at least one recipient first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (fields.length === 0) {
+      toast({
+        title: "No fields",
+        description: "Please add at least one signature field first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGeneratingLink(true);
+    try {
+      const response = await fetch(`/api/documents/${params.id}/activate`, {
+        method: "POST",
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to create signing link");
+      }
+      setShareLinks(data.links || []);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create signing link.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingLink(false);
+    }
+  };
+
+  const copyShareLink = async (link: { recipientId: string; url: string }) => {
+    try {
+      await navigator.clipboard.writeText(link.url);
+      setCopiedLinkId(link.recipientId);
+      toast({ title: "Link copied!", description: "Signing link copied to clipboard." });
+      setTimeout(() => setCopiedLinkId(null), 2000);
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to copy link to clipboard.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const closeSendDialog = () => {
+    setShowSendDialog(false);
+    // If we generated links, the doc is now pending — move to the detail view.
+    if (shareLinks.length > 0) {
+      router.push(`/dashboard/documents/${params.id}`);
     }
   };
 
@@ -1264,14 +1333,60 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
       </div>
 
       {/* Send for Signing Dialog */}
-      <Dialog open={showSendDialog} onOpenChange={setShowSendDialog}>
+      <Dialog open={showSendDialog} onOpenChange={(open) => { if (!open) closeSendDialog(); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Send for Signing</DialogTitle>
+            <DialogTitle>{shareLinks.length > 0 ? "Shareable signing link" : "Send for Signing"}</DialogTitle>
             <DialogDescription>
-              Review who this request will appear to come from before sending.
+              {shareLinks.length > 0
+                ? "Copy the link and send it to your signer yourself. No email has been sent."
+                : "Review who this request will appear to come from before sending."}
             </DialogDescription>
           </DialogHeader>
+          {shareLinks.length > 0 ? (
+            <div className="space-y-4 py-4">
+              <div className="space-y-3">
+                {shareLinks.map((link) => (
+                  <div key={link.recipientId} className="rounded-lg border p-3">
+                    <p className="text-sm font-medium">{link.name || link.email}</p>
+                    {link.name && (
+                      <p className="text-xs text-muted-foreground">{link.email}</p>
+                    )}
+                    <div className="mt-2 flex items-center gap-2">
+                      <Input
+                        readOnly
+                        value={link.url}
+                        onFocus={(e) => e.currentTarget.select()}
+                        className="flex-1 min-w-0 text-xs text-muted-foreground"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0"
+                        onClick={() => copyShareLink(link)}
+                      >
+                        {copiedLinkId === link.recipientId ? (
+                          <>
+                            <Check className="mr-1.5 h-3.5 w-3.5 text-[#07AFBA]" />
+                            Copied
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="mr-1.5 h-3.5 w-3.5" />
+                            Copy
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <DialogFooter>
+                <Button onClick={closeSendDialog}>Done</Button>
+              </DialogFooter>
+            </div>
+          ) : (
+          <>
           <div className="space-y-5 py-4">
             <div className="space-y-2">
               <Label htmlFor="send-from-name">From name</Label>
@@ -1380,13 +1495,27 @@ export default function DocumentEditorPage({ params }: EditorPageProps) {
               )}
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSendDialog(false)}>Cancel</Button>
-            <Button onClick={() => sendForSigning(sendFromName)} disabled={isSending}>
+          <DialogFooter className="flex-col gap-2 sm:flex-row sm:gap-2">
+            <Button variant="outline" onClick={() => setShowSendDialog(false)} className="sm:mr-auto">Cancel</Button>
+            <Button
+              variant="outline"
+              onClick={getShareableLink}
+              disabled={isSending || isGeneratingLink}
+            >
+              {isGeneratingLink ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Link2 className="mr-2 h-4 w-4" />
+              )}
+              Get a shareable link
+            </Button>
+            <Button onClick={() => sendForSigning(sendFromName)} disabled={isSending || isGeneratingLink}>
               <Send className="mr-2 h-4 w-4" />
               Send
             </Button>
           </DialogFooter>
+          </>
+          )}
         </DialogContent>
       </Dialog>
 
