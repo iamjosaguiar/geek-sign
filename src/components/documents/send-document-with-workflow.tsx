@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Send, Loader2, Workflow } from "lucide-react";
+import { Send, Loader2, Workflow, Link2, Check, Copy } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -28,6 +28,13 @@ interface WorkflowOption {
   status: string;
 }
 
+interface SigningLink {
+  recipientId: string;
+  name: string | null;
+  email: string;
+  url: string;
+}
+
 export function SendDocumentWithWorkflow({
   documentId,
   documentTitle,
@@ -35,11 +42,13 @@ export function SendDocumentWithWorkflow({
   hasFields,
 }: SendDocumentWithWorkflowProps) {
   const [showDialog, setShowDialog] = useState(false);
-  const [sendMethod, setSendMethod] = useState<"normal" | "workflow" | null>(null);
+  const [sendMethod, setSendMethod] = useState<"normal" | "workflow" | "link" | null>(null);
   const [workflows, setWorkflows] = useState<WorkflowOption[]>([]);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>("");
   const [loadingWorkflows, setLoadingWorkflows] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [links, setLinks] = useState<SigningLink[]>([]);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -121,6 +130,72 @@ export function SendDocumentWithWorkflow({
     }
   };
 
+  const handleGetLink = async () => {
+    if (!hasRecipients) {
+      toast({
+        title: "Cannot create link",
+        description: "Please add at least one recipient first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!hasFields) {
+      toast({
+        title: "Cannot create link",
+        description: "Please add at least one signature field first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setProcessing(true);
+
+    try {
+      const response = await fetch(`/api/documents/${documentId}/activate`, {
+        method: "POST",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to create signing link");
+      }
+
+      setLinks(data.links || []);
+      setSendMethod("link");
+      // Status is now "pending" — refresh so the page reflects it.
+      router.refresh();
+    } catch (error) {
+      console.error("Get link error:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create signing link",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleCopyLink = async (link: SigningLink) => {
+    try {
+      await navigator.clipboard.writeText(link.url);
+      setCopiedId(link.recipientId);
+      toast({
+        title: "Link copied!",
+        description: "Signing link copied to clipboard",
+      });
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to copy link to clipboard",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleSendViaWorkflow = async () => {
     if (!selectedWorkflowId) {
       toast({
@@ -164,20 +239,26 @@ export function SendDocumentWithWorkflow({
     }
   };
 
-  const handleMethodSelect = (method: "normal" | "workflow") => {
-    setSendMethod(method);
-
+  const handleMethodSelect = (method: "normal" | "workflow" | "link") => {
     if (method === "normal") {
       // Execute normal send immediately
+      setSendMethod(method);
       handleSendNormally();
+    } else if (method === "link") {
+      // Activate the document and fetch shareable links (no email sent)
+      handleGetLink();
+    } else {
+      // For workflow, keep dialog open to show workflow selection
+      setSendMethod(method);
     }
-    // For workflow, keep dialog open to show workflow selection
   };
 
   const resetDialog = () => {
     setShowDialog(false);
     setSendMethod(null);
     setSelectedWorkflowId("");
+    setLinks([]);
+    setCopiedId(null);
   };
 
   return (
@@ -216,6 +297,25 @@ export function SendDocumentWithWorkflow({
               <Button
                 variant="outline"
                 className="w-full h-auto py-4 flex flex-col items-start gap-2"
+                onClick={() => handleMethodSelect("link")}
+                disabled={processing}
+              >
+                <div className="flex items-center gap-2 font-semibold">
+                  {processing ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <Link2 className="h-5 w-5" />
+                  )}
+                  Get a shareable link
+                </div>
+                <p className="text-sm text-muted-foreground font-normal">
+                  Activate signing without emailing — copy the link and send it yourself
+                </p>
+              </Button>
+
+              <Button
+                variant="outline"
+                className="w-full h-auto py-4 flex flex-col items-start gap-2"
                 onClick={() => handleMethodSelect("workflow")}
                 disabled={processing}
               >
@@ -227,6 +327,55 @@ export function SendDocumentWithWorkflow({
                   Execute an automated workflow (approvals, notifications, etc.)
                 </p>
               </Button>
+            </div>
+          ) : sendMethod === "link" ? (
+            <div className="space-y-4 py-4">
+              <p className="text-sm text-muted-foreground">
+                {links.length === 1
+                  ? "Share this link with your signer. They can open it and sign without needing an email."
+                  : "Share each link with the matching signer. They can open it and sign without needing an email."}
+              </p>
+              <div className="space-y-3">
+                {links.map((link) => (
+                  <div key={link.recipientId} className="rounded-lg border p-3">
+                    <p className="text-sm font-medium">
+                      {link.name || link.email}
+                    </p>
+                    {link.name && (
+                      <p className="text-xs text-muted-foreground">{link.email}</p>
+                    )}
+                    <div className="mt-2 flex items-center gap-2">
+                      <input
+                        readOnly
+                        value={link.url}
+                        onFocus={(e) => e.currentTarget.select()}
+                        className="flex-1 min-w-0 rounded-md border bg-muted px-2 py-1.5 text-xs text-muted-foreground"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0"
+                        onClick={() => handleCopyLink(link)}
+                      >
+                        {copiedId === link.recipientId ? (
+                          <>
+                            <Check className="mr-1.5 h-3.5 w-3.5 text-[#07AFBA]" />
+                            Copied
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="mr-1.5 h-3.5 w-3.5" />
+                            Copy
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <DialogFooter>
+                <Button onClick={resetDialog}>Done</Button>
+              </DialogFooter>
             </div>
           ) : sendMethod === "workflow" ? (
             <div className="space-y-4 py-4">
