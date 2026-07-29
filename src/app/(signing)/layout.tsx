@@ -1,4 +1,36 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+// Signing links get pasted straight into iMessage / WhatsApp / email, where the
+// preview card is scraped from these tags. This layout wraps every /sign/[token]
+// page (a client component, which can't export metadata of its own), so without
+// this the deep link inherits the marketing homepage's
+// "Free E-Signatures | DocuSign Alternative" title — which reads like spam next
+// to a real agreement, and looks disconnected from the link the client pasted.
+//
+// Kept deliberately generic: the preview card is visible to anyone the link is
+// forwarded to, so it names no document, sender, or recipient.
+export const metadata: Metadata = {
+  // `absolute` bypasses the root "%s | Geek Sign" title template.
+  title: { absolute: "You've been sent a document to sign" },
+  description:
+    "Review and sign your document securely online — no account needed.",
+  openGraph: {
+    type: "website",
+    siteName: "Geek Sign",
+    title: "You've been sent a document to sign",
+    description:
+      "Review and sign your document securely online — no account needed.",
+  },
+  twitter: {
+    card: "summary",
+    title: "You've been sent a document to sign",
+    description:
+      "Review and sign your document securely online — no account needed.",
+  },
+  // Private, tokenised pages — keep them out of search engines.
+  robots: { index: false, follow: false },
+};
 
 export default function SigningLayout({
   children,

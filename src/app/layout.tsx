@@ -18,6 +18,9 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL || "https://sign.houseofgeeks.online"
+  ),
   title: {
     default: "Geek Sign - Free E-Signatures | DocuSign Alternative",
     template: "%s | Geek Sign",
