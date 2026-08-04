@@ -9,7 +9,7 @@ import {
   sendSenderDocumentSentEmail,
 } from "@/lib/email";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://sign.houseofgeeks.online";
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://sign.houseofgeeks.online").trim();
 
 export async function POST(
   request: NextRequest,

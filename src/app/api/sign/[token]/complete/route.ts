@@ -9,7 +9,7 @@ import {
   sendSenderDocumentCompletedEmail,
 } from "@/lib/email";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://sign.houseofgeeks.online";
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://sign.houseofgeeks.online").trim();
 
 interface FieldUpdate {
   id: string;

@@ -6,7 +6,7 @@ import { sendSenderDocumentViewedEmail } from "@/lib/email";
 import { plansConfig } from "@/config/plans";
 import type { Plan } from "@/types";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://sign.houseofgeeks.online";
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://sign.houseofgeeks.online").trim();
 
 export async function GET(
   request: NextRequest,

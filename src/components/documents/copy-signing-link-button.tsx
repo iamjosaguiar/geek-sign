@@ -13,7 +13,7 @@ export function CopySigningLinkButton({ signingToken }: CopySigningLinkButtonPro
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://sign.houseofgeeks.online";
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://sign.houseofgeeks.online").trim();
     const signingUrl = `${appUrl}/sign/${signingToken}`;
 
     try {

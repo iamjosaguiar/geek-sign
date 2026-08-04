@@ -19,6 +19,12 @@ interface SendDocumentWithWorkflowProps {
   documentTitle: string;
   hasRecipients: boolean;
   hasFields: boolean;
+  // The name recipients will see as the sender (email subject + body). Defaults
+  // to the document's sender display name, falling back to the signed-in user.
+  senderName: string;
+  // The email address the message is actually sent from (envelope From),
+  // shown read-only so the sender knows the full identity before sending.
+  fromAddress: string;
 }
 
 interface WorkflowOption {
@@ -40,6 +46,8 @@ export function SendDocumentWithWorkflow({
   documentTitle,
   hasRecipients,
   hasFields,
+  senderName,
+  fromAddress,
 }: SendDocumentWithWorkflowProps) {
   const [showDialog, setShowDialog] = useState(false);
   const [sendMethod, setSendMethod] = useState<"normal" | "workflow" | "link" | null>(null);
@@ -49,6 +57,7 @@ export function SendDocumentWithWorkflow({
   const [processing, setProcessing] = useState(false);
   const [links, setLinks] = useState<SigningLink[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [senderNameInput, setSenderNameInput] = useState(senderName);
   const router = useRouter();
 
   useEffect(() => {
@@ -103,6 +112,8 @@ export function SendDocumentWithWorkflow({
     try {
       const response = await fetch(`/api/documents/${documentId}/send`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ senderName: senderNameInput.trim() }),
       });
 
       const data = await response.json();
@@ -240,15 +251,12 @@ export function SendDocumentWithWorkflow({
   };
 
   const handleMethodSelect = (method: "normal" | "workflow" | "link") => {
-    if (method === "normal") {
-      // Execute normal send immediately
-      setSendMethod(method);
-      handleSendNormally();
-    } else if (method === "link") {
+    if (method === "link") {
       // Activate the document and fetch shareable links (no email sent)
       handleGetLink();
     } else {
-      // For workflow, keep dialog open to show workflow selection
+      // "normal" shows a sender-review step before emailing; "workflow" shows
+      // the workflow picker. Neither sends until the user confirms.
       setSendMethod(method);
     }
   };
@@ -259,6 +267,7 @@ export function SendDocumentWithWorkflow({
     setSelectedWorkflowId("");
     setLinks([]);
     setCopiedId(null);
+    setSenderNameInput(senderName);
   };
 
   return (
@@ -327,6 +336,49 @@ export function SendDocumentWithWorkflow({
                   Execute an automated workflow (approvals, notifications, etc.)
                 </p>
               </Button>
+            </div>
+          ) : sendMethod === "normal" ? (
+            <div className="space-y-4 py-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Sending as</label>
+                <input
+                  type="text"
+                  value={senderNameInput}
+                  onChange={(e) => setSenderNameInput(e.target.value)}
+                  placeholder={senderName}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <p className="text-sm text-muted-foreground mt-2">
+                  Recipients see this name in the email subject and body. The email
+                  itself is sent from {fromAddress}.
+                </p>
+              </div>
+
+              <DialogFooter className="flex gap-2 sm:gap-0">
+                <Button
+                  variant="outline"
+                  onClick={() => setSendMethod(null)}
+                  disabled={processing}
+                >
+                  Back
+                </Button>
+                <Button
+                  onClick={handleSendNormally}
+                  disabled={processing || !hasRecipients || !hasFields}
+                >
+                  {processing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="mr-2 h-4 w-4" />
+                      Send now
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
             </div>
           ) : sendMethod === "link" ? (
             <div className="space-y-4 py-4">

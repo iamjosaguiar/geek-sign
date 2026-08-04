@@ -4,7 +4,7 @@ import { documents, recipients, users, auditLogs } from "@/lib/db/schema";
 import { eq, and, lte, isNotNull } from "drizzle-orm";
 import { sendSignerReminderEmail } from "@/lib/email";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://sign.houseofgeeks.online";
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://sign.houseofgeeks.online").trim();
 
 export async function GET(request: NextRequest) {
   // Verify cron secret

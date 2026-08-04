@@ -5,7 +5,7 @@ import { documents, recipients, documentFields, auditLogs } from "@/lib/db/schem
 import { eq } from "drizzle-orm";
 import { documentAccessClause, getUserTeamIds } from "@/lib/db/team-access";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://sign.houseofgeeks.online";
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://sign.houseofgeeks.online").trim();
 
 /**
  * Activate a document for signing WITHOUT emailing the recipients.

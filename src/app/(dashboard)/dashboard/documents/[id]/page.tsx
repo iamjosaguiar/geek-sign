@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { db, documents, recipients, documentFields, auditLogs } from "@/lib/db";
-import { teamMembers } from "@/lib/db/schema";
+import { teamMembers, users } from "@/lib/db/schema";
 import { eq, and, desc, or, inArray } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import dynamic from "next/dynamic";
@@ -115,6 +115,22 @@ export default async function DocumentPage({ params }: DocumentPageProps) {
     .where(eq(auditLogs.documentId, params.id))
     .orderBy(desc(auditLogs.createdAt))
     .limit(10);
+
+  // Sender identity shown in the Send dialog before emailing. Mirrors the
+  // fallback the send route uses (document display name → the signed-in user).
+  const [senderUser] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, session.user.id));
+  const effectiveSenderName =
+    document.senderDisplayName ||
+    senderUser?.sendAsName ||
+    senderUser?.name ||
+    senderUser?.email ||
+    "You";
+  const fromName = (process.env.FROM_NAME || "Geek Sign").trim();
+  const fromEmail = (process.env.FROM_EMAIL || "noreply@houseofgeeks.com.au").trim();
+  const fromAddress = `${fromName} <${fromEmail}>`;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -275,6 +291,8 @@ export default async function DocumentPage({ params }: DocumentPageProps) {
                   documentTitle={document.title}
                   hasRecipients={docRecipients.length > 0}
                   hasFields={docFields.length > 0}
+                  senderName={effectiveSenderName}
+                  fromAddress={fromAddress}
                 />
               </>
             )}
